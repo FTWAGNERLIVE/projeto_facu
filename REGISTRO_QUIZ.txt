@@ -1,0 +1,8 @@
+===============================================
+        REGISTRO DE NOTAS - QUIZ PORTUGOL
+        Jogo Educativo de Programação
+===============================================
+
+Formato: TIMESTAMP | NOME | NOTA/TOTAL | PORCENTAGEM | DATA
+===============================================
+

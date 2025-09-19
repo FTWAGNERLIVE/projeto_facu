@@ -1,0 +1,247 @@
+===============================================
+        GABARITO - QUIZ DE LÓGICA DE PROGRAMAÇÃO
+                    JOGO PORTUGOL REACT
+===============================================
+
+Questão 1:
+Pergunta: Qual é a saída do seguinte código Portugol?
+Código:
+var
+    a, b: inteiro
+inicio
+    a := 5
+    b := 3
+    a := a + b
+    escreva(a)
+fimalgoritmo
+
+Opções:
+A) 5
+B) 8  ← RESPOSTA CORRETA
+C) 3
+D) 15
+
+Explicação: a começa com 5, b com 3. a := a + b resulta em a = 5 + 3 = 8
+
+===============================================
+
+Questão 2:
+Pergunta: O que acontece quando executamos este código?
+Código:
+var
+    x: inteiro
+inicio
+    x := 10
+    se x > 5 entao
+        escreva("Maior que 5")
+    senao
+        escreva("Menor ou igual a 5")
+    fimse
+fimalgoritmo
+
+Opções:
+A) Imprime 'Maior que 5'  ← RESPOSTA CORRETA
+B) Imprime 'Menor ou igual a 5'
+C) Erro de compilação
+D) Nada é impresso
+
+Explicação: Como x = 10 e 10 > 5, a condição é verdadeira e imprime 'Maior que 5'
+
+===============================================
+
+Questão 3:
+Pergunta: Quantas vezes o loop executa?
+Código:
+var
+    i: inteiro
+inicio
+    para i de 1 ate 5 faca
+        escreva(i)
+    fimpara
+fimalgoritmo
+
+Opções:
+A) 4 vezes
+B) 5 vezes  ← RESPOSTA CORRETA
+C) 6 vezes
+D) 1 vez
+
+Explicação: O loop 'para i de 1 ate 5' executa 5 vezes (i = 1, 2, 3, 4, 5)
+
+===============================================
+
+Questão 4:
+Pergunta: Qual é o valor final de 'soma'?
+Código:
+var
+    soma, i: inteiro
+inicio
+    soma := 0
+    para i de 1 ate 3 faca
+        soma := soma + i
+    fimpara
+    escreva(soma)
+fimalgoritmo
+
+Opções:
+A) 0
+B) 3
+C) 6  ← RESPOSTA CORRETA
+D) 9
+
+Explicação: soma = 0 + 1 + 2 + 3 = 6
+
+===============================================
+
+Questão 5:
+Pergunta: O que será impresso?
+Código:
+var
+    num: inteiro
+inicio
+    num := 7
+    se num % 2 = 0 entao
+        escreva("Par")
+    senao
+        escreva("Ímpar")
+    fimse
+fimalgoritmo
+
+Opções:
+A) Par
+B) Ímpar  ← RESPOSTA CORRETA
+C) Erro
+D) Nada
+
+Explicação: 7 % 2 = 1 (resto da divisão), que não é igual a 0, então é ímpar
+
+===============================================
+
+Questão 6:
+Pergunta: Qual é a saída do código?
+Código:
+var
+    a, b, temp: inteiro
+inicio
+    a := 10
+    b := 20
+    temp := a
+    a := b
+    b := temp
+    escreva(a, " ", b)
+fimalgoritmo
+
+Opções:
+A) 10 20
+B) 20 10  ← RESPOSTA CORRETA
+C) 10 10
+D) 20 20
+
+Explicação: O código troca os valores: temp=10, a=20, b=10
+
+===============================================
+
+Questão 7:
+Pergunta: Quantas iterações executa este loop?
+Código:
+var
+    cont: inteiro
+inicio
+    cont := 1
+    enquanto cont < 5 faca
+        cont := cont + 2
+    fimenquanto
+fimalgoritmo
+
+Opções:
+A) 2 iterações  ← RESPOSTA CORRETA
+B) 3 iterações
+C) 4 iterações
+D) 5 iterações
+
+Explicação: cont=1, depois 3, depois 5. Como 5 não é < 5, para. Total: 2 iterações
+
+===============================================
+
+Questão 8:
+Pergunta: O que acontece com este código?
+Código:
+var
+    x: inteiro
+inicio
+    x := 0
+    repita
+        x := x + 1
+    ate x >= 3
+    escreva(x)
+fimalgoritmo
+
+Opções:
+A) Imprime 0
+B) Imprime 3  ← RESPOSTA CORRETA
+C) Loop infinito
+D) Erro
+
+Explicação: O loop repita...ate executa até x >= 3. x vai de 0 para 1, 2, 3. Para quando x=3
+
+===============================================
+
+Questão 9:
+Pergunta: Qual é o resultado da expressão?
+Código:
+var
+    resultado: inteiro
+inicio
+    resultado := (2 + 3) * 4 - 1
+    escreva(resultado)
+fimalgoritmo
+
+Opções:
+A) 19  ← RESPOSTA CORRETA
+B) 15
+C) 23
+D) 11
+
+Explicação: (2 + 3) * 4 - 1 = 5 * 4 - 1 = 20 - 1 = 19
+
+===============================================
+
+Questão 10:
+Pergunta: O que será impresso?
+Código:
+var
+    i, j: inteiro
+inicio
+    para i de 1 ate 2 faca
+        para j de 1 ate 2 faca
+            escreva(i * j, " ")
+        fimpara
+    fimpara
+fimalgoritmo
+
+Opções:
+A) 1 2 2 4  ← RESPOSTA CORRETA
+B) 1 2 3 4
+C) 2 4 6 8
+D) 1 1 2 2
+
+Explicação: i=1: j=1→1*1=1, j=2→1*2=2. i=2: j=1→2*1=2, j=2→2*2=4
+
+===============================================
+
+RESUMO DAS RESPOSTAS CORRETAS:
+1. B) 8
+2. A) Imprime 'Maior que 5'
+3. B) 5 vezes
+4. C) 6
+5. B) Ímpar
+6. B) 20 10
+7. A) 2 iterações
+8. B) Imprime 3
+9. A) 19
+10. A) 1 2 2 4
+
+===============================================
+Total de questões: 10
+Sistema de pontuação: 1 ponto por questão correta
+===============================================
