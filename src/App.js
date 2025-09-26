@@ -260,6 +260,10 @@ fimalgoritmo`);
           currentLine={currentLine}
           isRunning={isRunning}
           isPaused={isPaused}
+          onPositionChange={setCharacterPosition}
+          onCommandExecute={(command) => {
+            addOutput(`Comando executado: ${command}`, 'success');
+          }}
         />
       </div>
         </div>

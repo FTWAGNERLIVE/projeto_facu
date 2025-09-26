@@ -1,11 +1,13 @@
-import React, { forwardRef, useEffect, useState } from 'react';
+import React, { forwardRef, useEffect, useState, useCallback } from 'react';
 import './GameArea.css';
 
 const GameArea = forwardRef(({ 
   characterPosition, 
   currentLine, 
   isRunning, 
-  isPaused 
+  isPaused,
+  onPositionChange,
+  onCommandExecute
 }, ref) => {
   const [obstacles, setObstacles] = useState([]);
   const [animationClass, setAnimationClass] = useState('');
@@ -13,6 +15,9 @@ const GameArea = forwardRef(({
   const [phase, setPhase] = useState(1);
   const [visitedObstacles, setVisitedObstacles] = useState(new Set());
   const [instructionsMinimized, setInstructionsMinimized] = useState(false);
+  const [currentCommand, setCurrentCommand] = useState('');
+  const [isManualMode, setIsManualMode] = useState(false);
+  const [keyboardEnabled, setKeyboardEnabled] = useState(false);
 
   // Função para verificar sobreposição
   const isOverlapping = (newObstacle, existingObstacles) => {
@@ -43,8 +48,8 @@ const GameArea = forwardRef(({
       do {
         newObstacle = {
           id: i,
-          x: Math.random() * 320 + 40, // 40px de margem de cada lado
-          y: Math.random() * 220 + 40, // 40px de margem de cada lado
+          x: Math.random() * 320 + 40,
+          y: Math.random() * 220 + 40,
           type: Math.random() > 0.5 ? 'tree' : 'rock',
           size: Math.random() * 30 + 20,
           visited: false
@@ -56,6 +61,62 @@ const GameArea = forwardRef(({
     }
     setObstacles(newObstacles);
   }, []);
+
+  // Controle por teclado
+  const handleKeyPress = useCallback((event) => {
+    if (!keyboardEnabled || isRunning) return;
+
+    const step = 30;
+    let newX = characterPosition.x;
+    let newY = characterPosition.y;
+    let command = '';
+
+    switch (event.key) {
+      case 'ArrowUp':
+        event.preventDefault();
+        command = `y := y - ${step}`;
+        newY = Math.max(40, characterPosition.y - step);
+        break;
+      case 'ArrowDown':
+        event.preventDefault();
+        command = `y := y + ${step}`;
+        newY = Math.min(260, characterPosition.y + step);
+        break;
+      case 'ArrowLeft':
+        event.preventDefault();
+        command = `x := x - ${step}`;
+        newX = Math.max(40, characterPosition.x - step);
+        break;
+      case 'ArrowRight':
+        event.preventDefault();
+        command = `x := x + ${step}`;
+        newX = Math.min(360, characterPosition.x + step);
+        break;
+      default:
+        return;
+    }
+
+    // Atualizar posição
+    if (onPositionChange) {
+      onPositionChange({ x: newX, y: newY });
+    }
+
+    // Adicionar comando
+    if (onCommandExecute) {
+      onCommandExecute(command);
+    }
+
+    setCurrentCommand(command);
+    setTimeout(() => setCurrentCommand(''), 1000);
+  }, [keyboardEnabled, isRunning, characterPosition, onPositionChange, onCommandExecute]);
+
+  // Adicionar/remover listener de teclado
+  useEffect(() => {
+    if (keyboardEnabled) {
+      document.addEventListener('keydown', handleKeyPress);
+      return () => document.removeEventListener('keydown', handleKeyPress);
+    }
+  }, [keyboardEnabled, handleKeyPress]);
 
   // Verificar colisão com obstáculos e pontuar
   useEffect(() => {
@@ -114,7 +175,6 @@ const GameArea = forwardRef(({
     setPhase(newPhase);
     setScore(0);
     setVisitedObstacles(new Set());
-    // Recriar obstáculos para nova fase
     const newObstacles = [];
     const maxAttempts = 100;
     
@@ -139,9 +199,14 @@ const GameArea = forwardRef(({
     setObstacles(newObstacles);
   };
 
+  const toggleKeyboardMode = () => {
+    setKeyboardEnabled(!keyboardEnabled);
+    setIsManualMode(!isManualMode);
+  };
+
   return (
     <div className="game-container">
-      {/* Debug Info - Fora da área do jogo */}
+      {/* Debug Info */}
       <div className="debug-info">
         <div className="debug-item">
           <strong>Linha Atual:</strong> {currentLine}
@@ -155,40 +220,62 @@ const GameArea = forwardRef(({
             {isRunning ? (isPaused ? 'Pausado' : 'Executando') : 'Parado'}
           </span>
         </div>
+        <div className="debug-item">
+          <strong>Teclado:</strong> 
+          <span className={`status ${keyboardEnabled ? 'running' : 'stopped'}`}>
+            {keyboardEnabled ? 'Ativo' : 'Inativo'}
+          </span>
+        </div>
       </div>
 
       <div ref={ref} className="game-area">
-      <div className="grid"></div>
-      
-      {/* Obstáculos */}
-      {obstacles.map(obstacle => (
+        <div className="grid"></div>
+        
+        {/* Área de movimento delimitada */}
+        <div className="movement-area"></div>
+        
+        {/* Obstáculos */}
+        {obstacles.map(obstacle => (
+          <div
+            key={obstacle.id}
+            className={`obstacle ${obstacle.type} ${obstacle.visited ? 'visited' : ''}`}
+            style={{
+              left: obstacle.x,
+              top: obstacle.y,
+              width: obstacle.size,
+              height: obstacle.size,
+              fontSize: obstacle.size * 0.6
+            }}
+          >
+            {getObstacleEmoji(obstacle.type)}
+          </div>
+        ))}
+
+        {/* Personagem */}
         <div
-          key={obstacle.id}
-          className={`obstacle ${obstacle.type} ${obstacle.visited ? 'visited' : ''}`}
+          className={`character ${animationClass}`}
           style={{
-            left: obstacle.x,
-            top: obstacle.y,
-            width: obstacle.size,
-            height: obstacle.size,
-            fontSize: obstacle.size * 0.6
+            left: characterPosition.x,
+            top: characterPosition.y,
+            transform: isPaused ? 'scale(1.1)' : 'scale(1)',
+            filter: isPaused ? 'hue-rotate(180deg)' : 'none'
           }}
         >
-          {getObstacleEmoji(obstacle.type)}
+          {isPaused ? '😴' : '😊'}
         </div>
-      ))}
 
-      {/* Personagem */}
-      <div
-        className={`character ${animationClass}`}
-        style={{
-          left: characterPosition.x,
-          top: characterPosition.y,
-          transform: isPaused ? 'scale(1.1)' : 'scale(1)',
-          filter: isPaused ? 'hue-rotate(180deg)' : 'none'
-        }}
-      >
-        {isPaused ? '😴' : '😊'}
-      </div>
+        {/* Comando atual sendo executado */}
+        {currentCommand && (
+          <div className="current-command-display">
+            <div className="command-text">{currentCommand}</div>
+            <div className="command-arrow">
+              {currentCommand.includes('x := x +') ? '→' : 
+               currentCommand.includes('x := x -') ? '←' :
+               currentCommand.includes('y := y +') ? '↓' :
+               currentCommand.includes('y := y -') ? '↑' : '●'}
+            </div>
+          </div>
+        )}
 
       {/* Controles de Fase */}
       <div className="phase-controls">
@@ -230,50 +317,64 @@ const GameArea = forwardRef(({
         </div>
       </div>
 
-      {/* Informações de debug */}
-
-      {/* Instruções */}
-      <div className={`instructions ${instructionsMinimized ? 'minimized' : ''}`}>
-        <div className="instructions-header">
-          <h3>🎯 Instruções do Jogo</h3>
+        {/* Controle de Teclado */}
+        <div className="keyboard-controls">
           <button 
-            className="minimize-btn"
-            onClick={() => setInstructionsMinimized(!instructionsMinimized)}
-            title={instructionsMinimized ? 'Expandir instruções' : 'Minimizar instruções'}
+            className={`keyboard-btn ${keyboardEnabled ? 'active' : ''}`}
+            onClick={toggleKeyboardMode}
+            disabled={isRunning}
           >
-            {instructionsMinimized ? '▶️' : '▼'}
+            {keyboardEnabled ? '⌨️ Teclado Ativo' : '⌨️ Ativar Teclado'}
           </button>
+          {keyboardEnabled && (
+            <div className="keyboard-hint">
+              Use as setas do teclado para mover
+            </div>
+          )}
         </div>
-        
-        {!instructionsMinimized && (
-          <div className="instructions-content">
-            <p>Use comandos Portugol para controlar o personagem:</p>
-            <ul>
-              <li><code>x := x + valor</code> - Move para direita</li>
-              <li><code>x := x - valor</code> - Move para esquerda</li>
-              <li><code>y := y + valor</code> - Move para baixo</li>
-              <li><code>y := y - valor</code> - Move para cima</li>
-              <li><code>escreva("texto")</code> - Mostra mensagem</li>
-            </ul>
-            
-            <div className="phase-instructions">
-              <h4>📋 Fases:</h4>
+
+        {/* Instruções */}
+        <div className={`instructions ${instructionsMinimized ? 'minimized' : ''}`}>
+          <div className="instructions-header">
+            <h3>🎯 Instruções do Jogo</h3>
+            <button 
+              className="minimize-btn"
+              onClick={() => setInstructionsMinimized(!instructionsMinimized)}
+              title={instructionsMinimized ? 'Expandir instruções' : 'Minimizar instruções'}
+            >
+              {instructionsMinimized ? '▶️' : '▼'}
+            </button>
+          </div>
+          
+          {!instructionsMinimized && (
+            <div className="instructions-content">
+              <p>Use comandos Portugol ou teclado para controlar o personagem:</p>
               <ul>
-                <li><strong>Fase 1:</strong> 🪨 +10 pontos, 🌳 -5 pontos</li>
-                <li><strong>Fase 2:</strong> Personagem roda em círculo</li>
-                <li><strong>Fase 3:</strong> Personagem executa dança</li>
+                <li><code>x := x + valor</code> ou <strong>→</strong> - Move para direita</li>
+                <li><code>x := x - valor</code> ou <strong>←</strong> - Move para esquerda</li>
+                <li><code>y := y + valor</code> ou <strong>↓</strong> - Move para baixo</li>
+                <li><code>y := y - valor</code> ou <strong>↑</strong> - Move para cima</li>
+                <li><code>escreva("texto")</code> - Mostra mensagem</li>
               </ul>
               
-              <h4>⚠️ Limites de Movimento:</h4>
-              <ul>
-                <li><strong>X:</strong> 30px a 370px (horizontal)</li>
-                <li><strong>Y:</strong> 30px a 270px (vertical)</li>
-                <li>Personagem não pode sair da área tracejada</li>
-              </ul>
+              <div className="phase-instructions">
+                <h4>📋 Fases:</h4>
+                <ul>
+                  <li><strong>Fase 1:</strong> 🪨 +10 pontos, 🌳 -5 pontos</li>
+                  <li><strong>Fase 2:</strong> Personagem roda em círculo</li>
+                  <li><strong>Fase 3:</strong> Personagem executa dança</li>
+                </ul>
+                
+                <h4>⚠️ Limites de Movimento:</h4>
+                <ul>
+                  <li><strong>X:</strong> 40px a 360px (horizontal)</li>
+                  <li><strong>Y:</strong> 40px a 260px (vertical)</li>
+                  <li>Personagem não pode sair da área tracejada</li>
+                </ul>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
       </div>
     </div>
   );
