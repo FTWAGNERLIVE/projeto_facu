@@ -5,11 +5,14 @@
   overflow: hidden;
   border: 2px solid #4CAF50;
   box-shadow: inset 0 0 0 3px rgba(76, 175, 80, 0.3);
+  width: 100%;
+  height: 500px;
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 /* Área de movimento delimitada */
-.game-area::before {
-  content: '';
+.movement-area {
   position: absolute;
   top: 40px;
   left: 40px;
@@ -429,4 +432,104 @@
 
 .character.moving-down {
   animation: moveDown 0.5s ease-in-out;
+}
+
+/* Comando atual sendo executado */
+.current-command-display {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-size: 12px;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  animation: slideIn 0.3s ease;
+}
+
+.command-text {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.command-arrow {
+  font-size: 20px;
+  color: #ff6b6b;
+  animation: pulse-arrow 0.6s ease-in-out infinite;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Controles de Teclado */
+.keyboard-controls {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.keyboard-btn {
+  padding: 8px 16px;
+  border: 2px solid #4CAF50;
+  border-radius: 8px;
+  background: white;
+  color: #2d3748;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.keyboard-btn:hover:not(:disabled) {
+  background: #4CAF50;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.keyboard-btn.active {
+  background: #4CAF50;
+  color: white;
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+}
+
+.keyboard-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.keyboard-hint {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 4px 8px;
+  border-radius: 4px;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

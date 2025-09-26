@@ -41,6 +41,7 @@
   display: flex;
   flex: 1;
   height: calc(100vh - 60px);
+  min-height: 600px;
 }
 
 .editor-panel {
@@ -104,7 +105,7 @@
 }
 
 /* Responsividade */
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
   .main-content {
     flex-direction: column;
   }
@@ -118,6 +119,17 @@
   .editor-panel {
     border-right: none;
     border-bottom: 3px solid #333;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    min-height: 500px;
+  }
+  
+  .editor-panel,
+  .game-panel {
+    min-height: 40vh;
   }
   
   .examples-buttons {

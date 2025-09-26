@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 import PortugolInterpreter from '../utils/PortugolInterpreter';
 import { portugolExamples, getAllExamples } from '../data/examples';
@@ -39,6 +39,7 @@ fimalgoritmo`);
   const [executedCommands, setExecutedCommands] = useState([]);
   const [currentCommand, setCurrentCommand] = useState('');
   const [isManualMode, setIsManualMode] = useState(false);
+  const [keyboardEnabled, setKeyboardEnabled] = useState(false);
   
   const interpreterRef = useRef(null);
   const gameAreaRef = useRef(null);
@@ -153,6 +154,70 @@ fimalgoritmo`);
     return '●';
   };
 
+  // Controle por teclado
+  const handleKeyPress = useCallback((event) => {
+    if (!keyboardEnabled || isRunning) return;
+
+    const step = 30;
+    let newX = characterPosition.x;
+    let newY = characterPosition.y;
+    let command = '';
+
+    switch (event.key) {
+      case 'ArrowUp':
+        event.preventDefault();
+        command = `y := y - ${step}`;
+        newY = Math.max(40, characterPosition.y - step);
+        break;
+      case 'ArrowDown':
+        event.preventDefault();
+        command = `y := y + ${step}`;
+        newY = Math.min(260, characterPosition.y + step);
+        break;
+      case 'ArrowLeft':
+        event.preventDefault();
+        command = `x := x - ${step}`;
+        newX = Math.max(40, characterPosition.x - step);
+        break;
+      case 'ArrowRight':
+        event.preventDefault();
+        command = `x := x + ${step}`;
+        newX = Math.min(360, characterPosition.x + step);
+        break;
+      default:
+        return;
+    }
+
+    // Atualizar posição
+    setCharacterPosition({ x: newX, y: newY });
+    
+    // Adicionar comando à lista
+    setExecutedCommands(prev => [...prev, { 
+      command, 
+      lineNumber: executedCommands.length + 1,
+      timestamp: Date.now()
+    }]);
+    
+    // Adicionar saída
+    addOutput(`Movimento por teclado: ${command}`, 'success');
+    
+    // Atualizar comando atual
+    setCurrentCommand(command);
+    
+    // Limpar comando atual após um tempo
+    setTimeout(() => {
+      setCurrentCommand('');
+    }, 1000);
+  }, [keyboardEnabled, isRunning, characterPosition, executedCommands.length, addOutput]);
+
+  // Adicionar/remover listener de teclado
+  useEffect(() => {
+    if (keyboardEnabled) {
+      document.addEventListener('keydown', handleKeyPress);
+      return () => document.removeEventListener('keydown', handleKeyPress);
+    }
+  }, [keyboardEnabled, handleKeyPress]);
+
   const executeManualMovement = (direction, value = 30) => {
     if (isRunning) return;
     
@@ -205,9 +270,14 @@ fimalgoritmo`);
 
   const toggleMode = () => {
     setIsManualMode(!isManualMode);
+    setKeyboardEnabled(!isManualMode);
     if (isManualMode) {
       resetGame();
     }
+  };
+
+  const toggleKeyboardMode = () => {
+    setKeyboardEnabled(!keyboardEnabled);
   };
 
   return (
@@ -225,6 +295,14 @@ fimalgoritmo`);
               onClick={toggleMode}
             >
               {isManualMode ? '🎯 Modo Manual' : '📝 Modo Código'}
+            </button>
+            
+            <button 
+              className={`btn ${keyboardEnabled ? 'btn-success' : 'btn-secondary'}`}
+              onClick={toggleKeyboardMode}
+              disabled={isRunning}
+            >
+              {keyboardEnabled ? '⌨️ Teclado Ativo' : '⌨️ Ativar Teclado'}
             </button>
             
             {!isManualMode && (
@@ -357,6 +435,19 @@ fimalgoritmo`);
               {isPaused ? '😴' : '😊'}
             </div>
 
+            {/* Comando atual sendo executado */}
+            {currentCommand && (
+              <div className="current-command-display">
+                <div className="command-text">{currentCommand}</div>
+                <div className="command-arrow">
+                  {currentCommand.includes('x := x +') ? '→' : 
+                   currentCommand.includes('x := x -') ? '←' :
+                   currentCommand.includes('y := y +') ? '↓' :
+                   currentCommand.includes('y := y -') ? '↑' : '●'}
+                </div>
+              </div>
+            )}
+
             {/* Informações de debug */}
             <div className="debug-info">
               <div className="debug-item">
@@ -369,6 +460,12 @@ fimalgoritmo`);
                 <strong>Status:</strong> 
                 <span className={`status ${isRunning ? (isPaused ? 'paused' : 'running') : 'stopped'}`}>
                   {isRunning ? (isPaused ? 'Pausado' : 'Executando') : 'Parado'}
+                </span>
+              </div>
+              <div className="debug-item">
+                <strong>Teclado:</strong> 
+                <span className={`status ${keyboardEnabled ? 'running' : 'stopped'}`}>
+                  {keyboardEnabled ? 'Ativo' : 'Inativo'}
                 </span>
               </div>
             </div>
