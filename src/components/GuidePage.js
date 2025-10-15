@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import Editor from '@monaco-editor/react';
+import MobileGameControl from './MobileGameControl';
 import PortugolInterpreter from '../utils/PortugolInterpreter';
 import { portugolExamples, getAllExamples } from '../data/examples';
 import './GuidePage.css';
@@ -280,13 +280,57 @@ fimalgoritmo`);
     setKeyboardEnabled(!keyboardEnabled);
   };
 
+  const handleGameAction = (action, command = null) => {
+    if (action === 'command' && command) {
+      // Adicionar comando executado manualmente
+      const newCommand = {
+        id: Date.now(),
+        command: command,
+        timestamp: new Date().toLocaleTimeString(),
+        type: 'manual'
+      };
+      setExecutedCommands(prev => [...prev, newCommand]);
+      addOutput(`Comando executado: ${command}`);
+      return;
+    }
+
+    switch (action) {
+      case 'execute':
+        executeCode();
+        break;
+      case 'pause':
+        pauseCode();
+        break;
+      case 'stop':
+        stopCode();
+        break;
+      case 'reset':
+        resetGame();
+        break;
+      default:
+        console.log('Ação desconhecida:', action);
+    }
+  };
+
   return (
     <div className="guide-container">
       <div className="guide-layout">
-        {/* Painel do Editor */}
+        {/* Painel de Controle Móvel */}
         <div className="editor-panel">
+          <MobileGameControl
+            characterPosition={characterPosition}
+            onPositionChange={setCharacterPosition}
+            onGameAction={handleGameAction}
+          />
+        </div>
+
+        {/* Painel do Jogo com Guia */}
+        <div className="game-panel">
           <div className="header">
-            📝 Editor de Código Portugol
+            🎮 Guia Visual de Programação
+            <div className="mode-indicator">
+              {isManualMode ? '🎯 Modo Manual' : '📝 Modo Código'}
+            </div>
           </div>
           
           <div className="controls">
@@ -340,47 +384,6 @@ fimalgoritmo`);
             <button className="btn btn-secondary" onClick={resetGame}>
               🔄 Reset
             </button>
-          </div>
-
-
-          <div className="editor-container">
-            <Editor
-              height="100%"
-              defaultLanguage="javascript"
-              value={code}
-              onChange={(value) => setCode(value || '')}
-              theme="vs-dark"
-              options={{
-                minimap: { enabled: false },
-                fontSize: 14,
-                lineNumbers: 'on',
-                roundedSelection: false,
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                wordWrap: 'on'
-              }}
-            />
-          </div>
-
-          <div className="output-panel">
-            <div style={{ marginBottom: '10px', fontWeight: 'bold', color: '#fff' }}>
-              📊 Saída do Programa:
-            </div>
-            {output.map((line, index) => (
-              <div key={index} className={`output-line ${line.type}`}>
-                [{new Date(line.timestamp).toLocaleTimeString()}] {line.message}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Painel do Jogo com Guia */}
-        <div className="game-panel">
-          <div className="header">
-            🎮 Guia Visual de Programação
-            <div className="mode-indicator">
-              {isManualMode ? '🎯 Modo Manual' : '📝 Modo Código'}
-            </div>
           </div>
           
           <div className="game-area" ref={gameAreaRef}>

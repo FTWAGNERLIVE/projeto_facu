@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle Móvel - Jogo Portugol</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            color: white;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .connection-status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .status-connected {
+            background: rgba(76, 175, 80, 0.8);
+            border: 2px solid #4CAF50;
+        }
+
+        .status-disconnected {
+            background: rgba(244, 67, 54, 0.8);
+            border: 2px solid #f44336;
+        }
+
+        .game-info {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .position-display {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .game-status {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .control-pad {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr;
+            align-items: center;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 20px 15px;
+            background: linear-gradient(145deg, #f0f0f0, #d0d0d0);
+            border-radius: 25px;
+            border: 3px solid #b0b0b0;
+            min-height: 140px;
+            gap: 15px;
+            box-shadow: 
+                0 8px 16px rgba(0, 0, 0, 0.3),
+                inset 0 2px 4px rgba(255, 255, 255, 0.5);
+            position: relative;
+        }
+
+        .control-pad::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(145deg, #f5e6a8, #e6d17a);
+            border-radius: 22px;
+            z-index: 1;
+        }
+
+        .control-pad::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 20%;
+            right: 20%;
+            height: 4px;
+            background: linear-gradient(90deg, #ff4444, #cc0000);
+            border-radius: 2px;
+            transform: translateY(-50%);
+            z-index: 3;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-pad > * {
+            position: relative;
+            z-index: 2;
+        }
+
+        .dpad {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: 6px;
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(145deg, #c0c0c0, #a0a0a0);
+            border-radius: 15px;
+            padding: 10px;
+            border: 3px solid #808080;
+            box-shadow: 
+                0 4px 8px rgba(0, 0, 0, 0.3),
+                inset 0 2px 4px rgba(255, 255, 255, 0.3);
+            justify-self: center;
+        }
+
+        .center-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            justify-self: center;
+        }
+
+        .action-pad {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 10px;
+            justify-self: center;
+        }
+
+        .control-btn {
+            width: 35px;
+            height: 35px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(145deg, #808080, #606060);
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 
+                0 3px 6px rgba(0, 0, 0, 0.4),
+                inset 0 1px 3px rgba(255, 255, 255, 0.3);
+        }
+
+        .center-btn {
+            width: 60px;
+            height: 60px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #ff6b35, #f7931e);
+            color: white;
+            font-size: 1.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 3px solid #ff8c42;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 
+                0 4px 8px rgba(0, 0, 0, 0.4),
+                inset 0 2px 4px rgba(255, 255, 255, 0.3);
+        }
+
+        .action-btn-small {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #2196F3, #1976D2);
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid #42A5F5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 
+                0 3px 6px rgba(0, 0, 0, 0.3),
+                inset 0 1px 3px rgba(255, 255, 255, 0.2);
+        }
+
+        .action-btn-small:nth-child(1) {
+            background: linear-gradient(145deg, #4CAF50, #388E3C);
+            border-color: #66BB6A;
+        }
+
+        .action-btn-small:nth-child(2) {
+            background: linear-gradient(145deg, #2196F3, #1976D2);
+            border-color: #42A5F5;
+        }
+
+        .action-btn-small:nth-child(3) {
+            background: linear-gradient(145deg, #9C27B0, #7B1FA2);
+            border-color: #BA68C8;
+        }
+
+        .action-btn-small:nth-child(4) {
+            background: linear-gradient(145deg, #F44336, #D32F2F);
+            border-color: #EF5350;
+        }
+
+        .control-btn:active {
+            transform: scale(0.9);
+            background: linear-gradient(145deg, #5a5a5a, #3a3a3a);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .center-btn:active {
+            transform: scale(0.9);
+            background: linear-gradient(145deg, #ff8c42, #ffa726);
+            box-shadow: 0 3px 6px rgba(255, 107, 53, 0.6);
+        }
+
+        .action-btn-small:active {
+            transform: scale(0.9);
+            background: linear-gradient(145deg, #42A5F5, #2196F3);
+            box-shadow: 0 2px 4px rgba(33, 150, 243, 0.5);
+        }
+
+        .control-btn.up {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        .control-btn.left {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .control-btn.right {
+            grid-column: 3;
+            grid-row: 2;
+        }
+
+        .control-btn.down {
+            grid-column: 2;
+            grid-row: 3;
+        }
+
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 400px;
+        }
+
+        .instructions h3 {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .instructions ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .instructions li:before {
+            content: "🎮";
+            position: absolute;
+            left: 0;
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .control-pad {
+                padding: 15px 10px;
+                min-height: 120px;
+                gap: 10px;
+            }
+            
+            .center-controls {
+                gap: 10px;
+            }
+            
+            .dpad {
+                width: 100px;
+                height: 100px;
+                gap: 5px;
+                padding: 8px;
+            }
+            
+            .control-btn {
+                width: 30px;
+                height: 30px;
+                font-size: 1rem;
+            }
+            
+            .center-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 1.5rem;
+            }
+            
+            .action-btn-small {
+                width: 35px;
+                height: 35px;
+                font-size: 0.8rem;
+            }
+            
+            .action-pad {
+                gap: 8px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .control-pad {
+                padding: 35px 50px;
+                min-height: 180px;
+            }
+            
+            .center-controls {
+                gap: 25px;
+            }
+            
+            .dpad {
+                width: 180px;
+                height: 180px;
+                gap: 12px;
+                padding: 18px;
+            }
+            
+            .control-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 1.8rem;
+            }
+            
+            .center-btn {
+                width: 100px;
+                height: 100px;
+                font-size: 2.5rem;
+            }
+            
+            .action-btn-small {
+                width: 55px;
+                height: 55px;
+                font-size: 1.1rem;
+            }
+            
+            .center-controls {
+                gap: 35px;
+            }
+            
+            .action-pad {
+                gap: 18px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .control-pad {
+                padding: 12px 8px;
+                min-height: 100px;
+                gap: 8px;
+            }
+            
+            .center-controls {
+                gap: 8px;
+            }
+            
+            .dpad {
+                width: 80px;
+                height: 80px;
+                gap: 4px;
+                padding: 6px;
+            }
+            
+            .control-btn {
+                width: 25px;
+                height: 25px;
+                font-size: 0.9rem;
+            }
+            
+            .center-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+            
+            .action-btn-small {
+                width: 30px;
+                height: 30px;
+                font-size: 0.7rem;
+            }
+            
+            .action-pad {
+                gap: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎮 Controle Móvel</h1>
+        <div id="connectionStatus" class="connection-status status-disconnected">
+            Desconectado
+        </div>
+    </div>
+
+    <div class="game-info">
+        <div id="positionDisplay" class="position-display">
+            Posição: (100, 100)
+        </div>
+        <div id="gameStatus" class="game-status">
+            Jogo: Parado
+        </div>
+    </div>
+
+    <div class="control-pad">
+        <div class="dpad">
+            <button class="control-btn up" data-direction="up">↑</button>
+            <button class="control-btn left" data-direction="left">←</button>
+            <button class="control-btn right" data-direction="right">→</button>
+            <button class="control-btn down" data-direction="down">↓</button>
+        </div>
+        
+        <div class="center-controls">
+            <button class="center-btn" data-action="center">🎯</button>
+            <div class="action-pad">
+                <button class="action-btn-small" id="executeBtn">▶️</button>
+                <button class="action-btn-small" id="pauseBtn">⏸️</button>
+                <button class="action-btn-small" id="stopBtn">⏹️</button>
+                <button class="action-btn-small" id="resetBtn">🔄</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script>
+        const socket = io();
+        let isConnected = false;
+
+        // Elementos DOM
+        const connectionStatus = document.getElementById('connectionStatus');
+        const positionDisplay = document.getElementById('positionDisplay');
+        const gameStatus = document.getElementById('gameStatus');
+        const executeBtn = document.getElementById('executeBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        // Conectar como cliente móvel
+        socket.emit('register', 'mobile');
+
+        // Eventos de conexão
+        socket.on('connect', () => {
+            isConnected = true;
+            updateConnectionStatus(true);
+        });
+
+        socket.on('disconnect', () => {
+            isConnected = false;
+            updateConnectionStatus(false);
+        });
+
+        // Receber posição do personagem
+        socket.on('characterPosition', (position) => {
+            positionDisplay.textContent = `Posição: (${Math.round(position.x)}, ${Math.round(position.y)})`;
+        });
+
+        // Receber status do jogo
+        socket.on('gameStatus', (status) => {
+            gameStatus.textContent = `Jogo: ${status.isRunning ? (status.isPaused ? 'Pausado' : 'Executando') : 'Parado'}`;
+        });
+
+        // Função para atualizar status de conexão
+        function updateConnectionStatus(connected) {
+            if (connected) {
+                connectionStatus.textContent = 'Conectado';
+                connectionStatus.className = 'connection-status status-connected';
+            } else {
+                connectionStatus.textContent = 'Desconectado';
+                connectionStatus.className = 'connection-status status-disconnected';
+            }
+        }
+
+        // Função para enviar comando
+        function sendCommand(command) {
+            if (isConnected) {
+                socket.emit('mobileCommand', command);
+            }
+        }
+
+        // Eventos dos botões direcionais
+        document.querySelectorAll('.control-btn[data-direction]').forEach(btn => {
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const direction = btn.dataset.direction;
+                sendCommand({ type: 'move', direction });
+            });
+
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const direction = btn.dataset.direction;
+                sendCommand({ type: 'move', direction });
+            });
+        });
+
+        // Evento do botão central
+        document.querySelector('.center-btn[data-action="center"]').addEventListener('click', (e) => {
+            e.preventDefault();
+            sendCommand({ type: 'move', direction: 'center' });
+        });
+
+        // Eventos dos botões de ação
+        executeBtn.addEventListener('click', () => {
+            sendCommand({ type: 'gameAction', action: 'execute' });
+        });
+
+        pauseBtn.addEventListener('click', () => {
+            sendCommand({ type: 'gameAction', action: 'pause' });
+        });
+
+        stopBtn.addEventListener('click', () => {
+            sendCommand({ type: 'gameAction', action: 'stop' });
+        });
+
+        resetBtn.addEventListener('click', () => {
+            sendCommand({ type: 'gameAction', action: 'reset' });
+        });
+
+        // Prevenir zoom em toque duplo
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        });
+
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+    </script>
+</body>
+</html>
