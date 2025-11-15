@@ -496,6 +496,70 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+
+/* ========== TELA DE CARREGAMENTO ENTRE MAPAS ========== */
+.loading-map-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.loading-map-content {
+  text-align: center;
+  color: white;
+}
+
+.loading-map-content h2 {
+  font-size: 2rem;
+  margin: 20px 0 10px 0;
+  color: #ffd700;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.loading-map-content p {
+  font-size: 1.2rem;
+  opacity: 0.8;
+  margin: 0;
+}
+
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 5px solid rgba(255, 255, 255, 0.3);
+  border-top: 5px solid #ffd700;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .maze-area {
@@ -504,6 +568,18 @@
   padding: 20px;
   display: inline-block;
   margin: 0 auto 20px auto;
+  position: relative;
+  transition: opacity 0.3s ease;
+}
+
+.maze-area.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.maze-wrapper {
+  position: relative;
+  display: inline-block;
 }
 
 .maze-row {
@@ -542,17 +618,17 @@
 .maze-cell.preview-path {
   background: rgba(76, 175, 80, 0.4) !important;
   border: 2px dashed #4CAF50;
-  animation: preview-pulse 1.5s ease-in-out infinite;
+  animation: preview-pulse 2s ease-in-out infinite;
 }
 
 @keyframes preview-pulse {
   0%, 100% {
-    opacity: 0.6;
-    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+    opacity: 0.5;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.4);
   }
   50% {
-    opacity: 0.8;
-    box-shadow: 0 0 15px rgba(76, 175, 80, 0.8);
+    opacity: 0.7;
+    box-shadow: 0 0 12px rgba(76, 175, 80, 0.6);
   }
 }
 
@@ -631,22 +707,83 @@
 .player-char {
   font-size: 30px;
   z-index: 10;
-  display: inline-block;
-  animation: player-move-smooth 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   will-change: transform;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), left 0.4s cubic-bezier(0.4, 0, 0.2, 1), top 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes player-move-smooth {
+/* Animações de deslizamento - apenas efeito visual durante o movimento */
+.player-char.slide-up {
+  animation: slide-up-effect 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.player-char.slide-down {
+  animation: slide-down-effect 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.player-char.slide-left {
+  animation: slide-left-effect 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.player-char.slide-right {
+  animation: slide-right-effect 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slide-up-effect {
   0% {
-    transform: scale(0.85) translateY(2px);
+    transform: scale(0.9);
     opacity: 0.8;
   }
   50% {
-    transform: scale(1.15) translateY(-3px);
+    transform: scale(1.1);
     opacity: 1;
   }
   100% {
-    transform: scale(1) translateY(0);
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-down-effect {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-left-effect {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-right-effect {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
     opacity: 1;
   }
 }
