@@ -15,14 +15,22 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './MazePage.css';
 
-const MazePage = () => {
+const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
   // ========== ESTADOS DO JOGO ==========
   // Posição do jogador no labirinto
   const [playerPosition, setPlayerPosition] = useState({ row: 1, col: 1 });
-  // Fila de comandos a serem executados
+  // Fila de comandos a serem executados (com ID único para cada comando)
   const [commandQueue, setCommandQueue] = useState([]);
+  // Células que serão percorridas (para preview no nível fácil)
+  const [previewPath, setPreviewPath] = useState(new Set());
   // Indica se os comandos estão sendo executados
   const [isExecuting, setIsExecuting] = useState(false);
+  // IDs dos comandos que estão sendo animados (desfragmentando)
+  const [animatingIds, setAnimatingIds] = useState(new Set());
+  // IDs dos comandos que colidiram com parede (animação vermelha)
+  const [collidedIds, setCollidedIds] = useState(new Set());
+  // Contador para gerar IDs únicos
+  const commandIdCounter = useRef(0);
   // Bloco sendo arrastado (drag and drop)
   const [draggedBlock, setDraggedBlock] = useState(null);
   // Índice do bloco selecionado (navegação por teclado)
@@ -39,12 +47,24 @@ const MazePage = () => {
   const lastButtonStates = useRef({});
   
   // ========== ESTADOS DO CRONÔMETRO ==========
-  // Tempo decorrido em milissegundos
+  // Tempo decorrido em milissegundos (tempo total acumulado para exibição)
   const [timer, setTimer] = useState(0);
+  // Tempo de cada fase individual (array com 3 valores)
+  const [phaseTimes, setPhaseTimes] = useState([0, 0, 0]);
+  // Timer individual da fase atual (começa em 0 a cada nova fase)
+  const [currentPhaseTimer, setCurrentPhaseTimer] = useState(0);
+  // Referência para o timer da fase atual (para captura precisa)
+  const currentPhaseTimerRef = useRef(0);
+  // Referência para armazenar o tempo acumulado das fases anteriores
+  const accumulatedPhasesTimeRef = useRef(0);
   // Indica se o cronômetro está rodando
   const [isTimerRunning, setIsTimerRunning] = useState(false);
-  // Referência para o intervalo do cronômetro
+  // Referência para o intervalo do cronômetro total
   const timerInterval = useRef(null);
+  // Referência para o intervalo do cronômetro da fase atual
+  const phaseTimerInterval = useRef(null);
+  // Flag para evitar processamento múltiplo da conclusão de fase
+  const isProcessingPhaseCompletion = useRef(false);
   
   // ========== ESTADOS DO SISTEMA DE MAPAS ==========
   // Índice do mapa atual (0, 1 ou 2)
@@ -63,6 +83,8 @@ const MazePage = () => {
   const [playerName, setPlayerName] = useState('');
   // Lista do ranking (Top 10)
   const [ranking, setRanking] = useState([]);
+  // Tempo final capturado quando o jogo é completado
+  const [finalTime, setFinalTime] = useState(0);
   
   // ========== MAPAS DO JOGO ==========
   // Array com todos os mapas disponíveis (18 mapas diferentes)
@@ -274,38 +296,95 @@ const MazePage = () => {
 
   const [maze, setMaze] = useState(allMazes[0]);
 
-  // Carregar ranking do localStorage
-  useEffect(() => {
-    const savedRanking = localStorage.getItem('mazeRanking');
-    if (savedRanking) {
-      setRanking(JSON.parse(savedRanking));
+  // ========== FUNÇÕES AUXILIARES ==========
+  
+  /**
+   * Calcula o preview do caminho baseado nos comandos da fila (nível fácil)
+   * @returns {Set} - Set com as posições que serão percorridas
+   */
+  const calculatePreviewPath = () => {
+    if (difficulty !== 'easy' || commandQueue.length === 0) {
+      return new Set();
     }
-  }, []);
 
-  // Selecionar 3 mapas aleatórios no início (garantindo que o 3º tenha chave)
-  useEffect(() => {
-    if (selectedMaps.length === 0) {
+    const path = new Set();
+    let currentPos = { ...playerPosition };
+    
+    // Adicionar posição inicial
+    path.add(`${currentPos.row},${currentPos.col}`);
+
+    for (const cmd of commandQueue) {
+      let newPos = { ...currentPos };
+
+      switch (cmd.id) {
+        case 'up':
+          if (currentPos.row > 0) {
+            newPos.row = currentPos.row - 1;
+          }
+          break;
+        case 'down':
+          if (currentPos.row < maze.length - 1) {
+            newPos.row = currentPos.row + 1;
+          }
+          break;
+        case 'left':
+          if (currentPos.col > 0) {
+            newPos.col = currentPos.col - 1;
+          }
+          break;
+        case 'right':
+          if (currentPos.col < maze[0].length - 1) {
+            newPos.col = currentPos.col + 1;
+          }
+          break;
+        default:
+          continue;
+      }
+
+      // Verificar se é movimento válido
+      if (newPos.row >= 0 && newPos.row < maze.length &&
+          newPos.col >= 0 && newPos.col < maze[0].length &&
+          maze[newPos.row][newPos.col] !== '#') {
+        currentPos = newPos;
+        path.add(`${currentPos.row},${currentPos.col}`);
+      } else {
+        // Colisão - parar preview
+        break;
+      }
+    }
+
+    return path;
+  };
+
+  /**
+   * Seleciona 3 mapas aleatórios baseado na dificuldade
+   * @returns {Array} - Array com 3 mapas selecionados
+   */
+  const selectNewMaps = () => {
+    if (difficulty === 'hard') {
+      // Nível difícil: todos os mapas precisam de chave
+      const mapsWithKey = allMazes.filter((m, idx) => m.some(row => row.includes('K')));
+      const shuffled = [...mapsWithKey].sort(() => Math.random() - 0.5);
+      return [shuffled[0], shuffled[1], shuffled[2]];
+    } else if (difficulty === 'easy') {
+      // Nível fácil: mapas menores, sem chave
+      const mapsWithoutKey = allMazes.filter((m, idx) => !m.some(row => row.includes('K')));
+      const shuffled = [...mapsWithoutKey].sort(() => Math.random() - 0.5);
+      return [shuffled[0], shuffled[1], shuffled[2] || shuffled[0]];
+    } else {
+      // Nível médio: padrão atual (2 sem chave + 1 com chave)
       const mapsWithoutKey = allMazes.filter((m, idx) => !m.some(row => row.includes('K')));
       const mapsWithKey = allMazes.filter((m, idx) => m.some(row => row.includes('K')));
       
-      // Selecionar 2 mapas aleatórios sem chave
       const shuffled = [...mapsWithoutKey].sort(() => Math.random() - 0.5);
       const selected = [shuffled[0], shuffled[1]];
       
-      // Adicionar um mapa com chave como 3º
       const keyMap = mapsWithKey[Math.floor(Math.random() * mapsWithKey.length)];
       selected.push(keyMap);
       
-      setSelectedMaps(selected);
-      const firstMaze = selected[0];
-      setMaze(firstMaze);
-      const startPos = calculateStartPosition(firstMaze);
-      setPlayerPosition(startPos);
-      setCurrentMapIndex(0);
+      return selected;
     }
-  }, [selectedMaps.length]);
-
-  // ========== FUNÇÕES AUXILIARES ==========
+  };
   
   /**
    * Calcula a posição inicial do jogador que esteja mais distante do destino
@@ -363,6 +442,40 @@ const MazePage = () => {
     return bestPosition;
   };
 
+  // Carregar ranking do localStorage baseado na dificuldade
+  useEffect(() => {
+    const rankingKey = `mazeRanking-${difficulty}`;
+    const savedRanking = localStorage.getItem(rankingKey);
+    if (savedRanking) {
+      setRanking(JSON.parse(savedRanking));
+    } else {
+      setRanking([]);
+    }
+  }, [difficulty]);
+
+  // Selecionar 3 mapas aleatórios no início baseado na dificuldade
+  useEffect(() => {
+    if (selectedMaps.length === 0) {
+      const selected = selectNewMaps();
+      setSelectedMaps(selected);
+      const firstMaze = selected[0];
+      setMaze(firstMaze);
+      const startPos = calculateStartPosition(firstMaze);
+      setPlayerPosition(startPos);
+      setCurrentMapIndex(0);
+    }
+  }, [selectedMaps.length, difficulty]);
+
+  // Calcular preview do caminho (nível fácil)
+  useEffect(() => {
+    if (difficulty === 'easy' && commandQueue.length > 0) {
+      const path = calculatePreviewPath();
+      setPreviewPath(path);
+    } else {
+      setPreviewPath(new Set());
+    }
+  }, [commandQueue.length, playerPosition.row, playerPosition.col, maze, difficulty]);
+
   const availableCommands = [
     { id: 'up', label: 'Mover para Cima', command: 'y := y - 1', icon: '↑' },
     { id: 'down', label: 'Mover para Baixo', command: 'y := y + 1', icon: '↓' },
@@ -379,6 +492,8 @@ const MazePage = () => {
   const selectedBlockIndexRef = useRef(selectedBlockIndex);
   const executeCommandsRef = useRef();
   const resetPositionRef = useRef();
+  const timerRef = useRef(timer);
+  const finalTimeRef = useRef(0);
 
   /**
    * Atualiza os refs sempre que os estados mudam
@@ -388,33 +503,62 @@ const MazePage = () => {
     commandQueueRef.current = commandQueue;
     isExecutingRef.current = isExecuting;
     selectedBlockIndexRef.current = selectedBlockIndex;
-  }, [commandQueue, isExecuting, selectedBlockIndex]);
+    timerRef.current = timer;
+  }, [commandQueue, isExecuting, selectedBlockIndex, timer]);
 
   // ========== HOOKS DO CRONÔMETRO ==========
   
   /**
    * Inicia o cronômetro quando o primeiro comando é adicionado à fila
+   * Inicia tanto o timer total quanto o timer da fase atual
    */
   useEffect(() => {
     if (commandQueue.length === 1 && !isTimerRunning) {
+      // Usar o ref que armazena o tempo acumulado das fases anteriores
+      const totalTimeSoFar = accumulatedPhasesTimeRef.current;
+      
+      // Inicializar o timer total com a soma das fases anteriores
+      setTimer(totalTimeSoFar);
+      timerRef.current = totalTimeSoFar;
+      
+      // Iniciar o timer da fase atual em 0
+      setCurrentPhaseTimer(0);
+      currentPhaseTimerRef.current = 0;
+      
       setIsTimerRunning(true);
-      setTimer(0);
     }
   }, [commandQueue.length, isTimerRunning]);
 
   /**
-   * Atualiza o cronômetro a cada 10ms (para mostrar milissegundos)
-   * Limpa o intervalo quando o cronômetro para
+   * Atualiza o cronômetro total e da fase atual a cada 10ms
+   * Limpa os intervalos quando o cronômetro para
    */
   useEffect(() => {
     if (isTimerRunning) {
+      // Timer total (para exibição)
       timerInterval.current = setInterval(() => {
-        setTimer(prev => prev + 10);
+        setTimer(prev => {
+          const newValue = prev + 10;
+          timerRef.current = newValue;
+          return newValue;
+        });
+      }, 10);
+      
+      // Timer da fase atual
+      phaseTimerInterval.current = setInterval(() => {
+        // Atualizar o ref primeiro (sempre tem o valor mais atualizado)
+        currentPhaseTimerRef.current = (currentPhaseTimerRef.current || 0) + 10;
+        // Depois atualizar o state
+        setCurrentPhaseTimer(currentPhaseTimerRef.current);
       }, 10);
     } else {
       if (timerInterval.current) {
         clearInterval(timerInterval.current);
         timerInterval.current = null;
+      }
+      if (phaseTimerInterval.current) {
+        clearInterval(phaseTimerInterval.current);
+        phaseTimerInterval.current = null;
       }
     }
 
@@ -422,6 +566,10 @@ const MazePage = () => {
       if (timerInterval.current) {
         clearInterval(timerInterval.current);
         timerInterval.current = null;
+      }
+      if (phaseTimerInterval.current) {
+        clearInterval(phaseTimerInterval.current);
+        phaseTimerInterval.current = null;
       }
     };
   }, [isTimerRunning]);
@@ -443,7 +591,7 @@ const MazePage = () => {
 
   /**
    * Verifica se o jogador chegou no destino (E)
-   * - Se for o 3º mapa, verifica se tem chave
+   * - Se for o 3º mapa (ou qualquer mapa no difícil), verifica se tem chave
    * - Avança para o próximo mapa ou completa o jogo
    * - O cronômetro só para quando completa os 3 mapas
    */
@@ -454,35 +602,110 @@ const MazePage = () => {
     if (endRow >= 0 && endCol >= 0 && 
         playerPosition.row === endRow && 
         playerPosition.col === endCol && 
-        isTimerRunning) {
-      // Se for o 3º mapa e não tem chave, não completa
-      if (completedMaps === 2 && !hasKey) {
+        isTimerRunning &&
+        !isProcessingPhaseCompletion.current) {
+      // Verificar se precisa de chave
+      const needsKey = difficulty === 'hard' || (difficulty === 'medium' && completedMaps === 2);
+      if (needsKey && !hasKey) {
         return;
       }
       
-      // Não parar o cronômetro aqui - ele só para quando completar os 3 mapas
+      // Marcar que estamos processando a conclusão da fase
+      isProcessingPhaseCompletion.current = true;
       
       // Avançar para próximo mapa
       if (completedMaps < 2) {
-        const nextMapIndex = currentMapIndex + 1;
-        setCurrentMapIndex(nextMapIndex);
-        if (selectedMaps.length > nextMapIndex) {
-          const nextMaze = selectedMaps[nextMapIndex];
-          setMaze(nextMaze);
-          const startPos = calculateStartPosition(nextMaze);
-          setPlayerPosition(startPos);
-        }
-        setCompletedMaps(prev => prev + 1);
-        setCommandQueue([]);
-        setHasKey(false);
-        // Cronômetro continua rodando - não resetar
-      } else {
-        // Jogo completo! Parar cronômetro e mostrar modal
+        // Capturar o tempo da fase atual ANTES de parar o cronômetro
+        // Usar o maior valor entre ref e state para garantir precisão
+        const refTime = currentPhaseTimerRef.current || 0;
+        const stateTime = currentPhaseTimer || 0;
+        const currentPhaseTime = Math.max(refTime, stateTime);
+        
+        // Calcular o tempo acumulado das fases anteriores
+        const previousPhasesTime = phaseTimes.reduce((sum, time) => sum + time, 0);
+        // Calcular tempo total acumulado até agora (incluindo a fase atual)
+        const totalTimeSoFar = previousPhasesTime + currentPhaseTime;
+        
+        // Salvar o tempo da fase no array usando função de atualização para evitar problemas de closure
+        setPhaseTimes(prev => {
+          const newPhaseTimes = [...prev];
+          newPhaseTimes[currentMapIndex] = currentPhaseTime;
+          
+          // Atualizar o ref com o tempo acumulado das fases completadas
+          accumulatedPhasesTimeRef.current = newPhaseTimes.reduce((sum, time) => sum + time, 0);
+          
+          return newPhaseTimes;
+        });
+        
+        // Parar o cronômetro
         setIsTimerRunning(false);
-        setShowCompletionModal(true);
+        
+        // Aguardar um pouco para garantir que os intervalos foram limpos
+        setTimeout(() => {
+          // Avançar para o próximo mapa
+          const nextMapIndex = currentMapIndex + 1;
+          setCurrentMapIndex(nextMapIndex);
+          if (selectedMaps.length > nextMapIndex) {
+            const nextMaze = selectedMaps[nextMapIndex];
+            setMaze(nextMaze);
+            const startPos = calculateStartPosition(nextMaze);
+            setPlayerPosition(startPos);
+          }
+          setCompletedMaps(prev => prev + 1);
+          setCommandQueue([]);
+          setHasKey(false);
+          
+          // Resetar o timer da fase atual para 0
+          setCurrentPhaseTimer(0);
+          currentPhaseTimerRef.current = 0;
+          
+          // Atualizar o timer total para refletir o tempo acumulado
+          setTimer(totalTimeSoFar);
+          timerRef.current = totalTimeSoFar;
+          
+          // Resetar a flag após um delay para permitir que a próxima fase seja processada
+          setTimeout(() => {
+            isProcessingPhaseCompletion.current = false;
+          }, 100);
+        }, 20);
+      } else {
+        // Jogo completo! Capturar o tempo da última fase ANTES de parar o cronômetro
+        // Usar o maior valor entre ref e state para garantir precisão
+        const refTime = currentPhaseTimerRef.current || 0;
+        const stateTime = currentPhaseTimer || 0;
+        const currentPhaseTime = Math.max(refTime, stateTime);
+        
+        // Salvar o tempo da última fase usando função de atualização
+        setPhaseTimes(prev => {
+          const newPhaseTimes = [...prev];
+          newPhaseTimes[currentMapIndex] = currentPhaseTime;
+          
+          // Calcular o tempo total final (soma de todas as 3 fases)
+          const finalTotalTime = newPhaseTimes.reduce((sum, time) => sum + time, 0);
+          
+          // Atualizar o ref
+          accumulatedPhasesTimeRef.current = finalTotalTime;
+          
+          // Capturar o tempo final
+          finalTimeRef.current = finalTotalTime;
+          setFinalTime(finalTotalTime);
+          
+          return newPhaseTimes;
+        });
+        
+        // Parar o cronômetro
+        setIsTimerRunning(false);
+        
+        // Aguardar um pouco para garantir que os intervalos foram limpos
+        setTimeout(() => {
+          // Mostrar o modal
+          setShowCompletionModal(true);
+          // Resetar a flag
+          isProcessingPhaseCompletion.current = false;
+        }, 20);
       }
     }
-  }, [playerPosition, maze, isTimerRunning, completedMaps, hasKey, currentMapIndex, timer, selectedMaps]);
+  }, [playerPosition, maze, isTimerRunning, completedMaps, hasKey, currentMapIndex, selectedMaps, difficulty]);
 
   // ========== HOOKS DO CONTROLE PS4 ==========
   
@@ -606,12 +829,25 @@ const MazePage = () => {
           const currentIndex = selectedBlockIndexRef.current;
           if (currentIndex >= 0 && currentIndex < availableCommands.length) {
             const selectedCommand = availableCommands[currentIndex];
-            setCommandQueue(prev => [...prev, selectedCommand]);
+            setCommandQueue(prev => [...prev, { ...selectedCommand, uniqueId: commandIdCounter.current++ }]);
           }
           lastButtonStates.current.buttonX = true;
         }
       } else {
         lastButtonStates.current.buttonX = false;
+      }
+
+      // Círculo (botão 1) ou B - Remover último comando da fila
+      if (buttons[1] && buttons[1].pressed) {
+        if (!lastButtonStates.current.buttonCircle && !isExecutingRef.current && commandQueueRef.current.length > 0) {
+          setCommandQueue(prev => {
+            if (prev.length === 0) return prev;
+            return prev.slice(0, -1);
+          });
+          lastButtonStates.current.buttonCircle = true;
+        }
+      } else {
+        lastButtonStates.current.buttonCircle = false;
       }
 
       // Triângulo (botão 3) ou Y - Executar comandos
@@ -648,16 +884,28 @@ const MazePage = () => {
         lastButtonStates.current.buttonL2 = false;
       }
 
-      // Share/Select (botão 8) - Resetar jogo
+      // Share/Select (botão 8) - Voltar para seleção de níveis
       if (buttons[8] && buttons[8].pressed) {
         if (!lastButtonStates.current.buttonShare) {
-          if (resetPositionRef.current) {
-            resetPositionRef.current();
+          if (onBackToLevelSelect) {
+            onBackToLevelSelect();
           }
           lastButtonStates.current.buttonShare = true;
         }
       } else {
         lastButtonStates.current.buttonShare = false;
+      }
+
+      // Options/Menu (botão 9) - Resetar jogo
+      if (buttons[9] && buttons[9].pressed) {
+        if (!lastButtonStates.current.buttonOptions) {
+          if (resetPositionRef.current) {
+            resetPositionRef.current();
+          }
+          lastButtonStates.current.buttonOptions = true;
+        }
+      } else {
+        lastButtonStates.current.buttonOptions = false;
       }
     };
 
@@ -715,7 +963,31 @@ const MazePage = () => {
           e.preventDefault();
           if (selectedBlockIndex >= 0 && selectedBlockIndex < availableCommands.length) {
             const selectedCommand = availableCommands[selectedBlockIndex];
-            setCommandQueue(prev => [...prev, selectedCommand]);
+            setCommandQueue(prev => [...prev, { ...selectedCommand, uniqueId: commandIdCounter.current++ }]);
+          }
+          break;
+        case 'Enter':
+          e.preventDefault();
+          if (!isExecuting && commandQueue.length > 0) {
+            if (executeCommandsRef.current) {
+              executeCommandsRef.current();
+            }
+          }
+          break;
+        case 'c':
+        case 'C':
+          e.preventDefault();
+          if (!isExecuting && commandQueue.length > 0) {
+            setCommandQueue(prev => {
+              if (prev.length === 0) return prev;
+              return prev.slice(0, -1);
+            });
+          }
+          break;
+        case 'Escape':
+          e.preventDefault();
+          if (resetPositionRef.current) {
+            resetPositionRef.current();
           }
           break;
         default:
@@ -725,7 +997,7 @@ const MazePage = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedBlockIndex, isExecuting]);
+  }, [selectedBlockIndex, isExecuting, commandQueue.length]);
 
   const handleDragStart = (e, command) => {
     setDraggedBlock(command);
@@ -741,7 +1013,7 @@ const MazePage = () => {
     e.preventDefault();
     if (draggedBlock) {
       const newQueue = [...commandQueue];
-      newQueue.splice(index, 0, draggedBlock);
+      newQueue.splice(index, 0, { ...draggedBlock, uniqueId: commandIdCounter.current++ });
       setCommandQueue(newQueue);
       setDraggedBlock(null);
     }
@@ -750,14 +1022,17 @@ const MazePage = () => {
   const handleDropQueue = (e) => {
     e.preventDefault();
     if (draggedBlock) {
-      setCommandQueue([...commandQueue, draggedBlock]);
+      setCommandQueue([...commandQueue, { ...draggedBlock, uniqueId: commandIdCounter.current++ }]);
       setDraggedBlock(null);
     }
   };
 
-  const removeCommand = (index) => {
-    const newQueue = commandQueue.filter((_, i) => i !== index);
-    setCommandQueue(newQueue);
+  const removeCommand = () => {
+    // Remove sempre o último bloco adicionado (último da fila)
+    setCommandQueue(prev => {
+      if (prev.length === 0) return prev;
+      return prev.slice(0, -1);
+    });
   };
 
   const clearQueue = () => {
@@ -776,9 +1051,12 @@ const MazePage = () => {
 
     setIsExecuting(true);
     let currentPos = { ...playerPosition };
+    const queue = [...commandQueueRef.current];
 
-    for (let i = 0; i < commandQueueRef.current.length; i++) {
-      const cmd = commandQueueRef.current[i];
+    for (let i = 0; i < queue.length; i++) {
+      const cmd = queue[i];
+      const cmdUniqueId = cmd.uniqueId !== undefined ? cmd.uniqueId : i; // Usar ID único se existir, senão usar índice
+      
       let newPos = { ...currentPos };
 
       switch (cmd.id) {
@@ -806,40 +1084,93 @@ const MazePage = () => {
           continue;
       }
 
-      if (newPos.row >= 0 && newPos.row < maze.length &&
-          newPos.col >= 0 && newPos.col < maze[0].length &&
-          maze[newPos.row][newPos.col] !== '#') {
-        currentPos = newPos;
-        setPlayerPosition(currentPos);
+      // Verificar se há colisão com parede
+      const isWallCollision = newPos.row < 0 || 
+                              newPos.row >= maze.length ||
+                              newPos.col < 0 || 
+                              newPos.col >= maze[0].length ||
+                              (newPos.row >= 0 && newPos.row < maze.length &&
+                               newPos.col >= 0 && newPos.col < maze[0].length &&
+                               maze[newPos.row][newPos.col] === '#');
+
+      if (isWallCollision) {
+        // Colisão detectada - parar execução e mostrar animação vermelha
+        // Adicionar animação vermelha no bloco que colidiu
+        setCollidedIds(prev => new Set(prev).add(cmdUniqueId));
         
-        // Verificar se pegou a chave
-        if (maze[currentPos.row][currentPos.col] === 'K' && !hasKey) {
-          setHasKey(true);
-        }
+        // Aguardar animação vermelha
+        await new Promise(resolve => setTimeout(resolve, 800));
         
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Limpar toda a fila de comandos
+        setCommandQueue([]);
+        
+        // Limpar todas as listas de animações
+        setCollidedIds(new Set());
+        setIsExecuting(false);
+        setAnimatingIds(new Set());
+        return;
       }
+
+      // Movimento válido - executar
+      // Iniciar animação de desfragmentação para este comando
+      setAnimatingIds(prev => new Set(prev).add(cmdUniqueId));
+      
+      // Aguardar um pouco antes de executar o movimento (para animação suave)
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Atualizar posição do jogador (a animação CSS fará o movimento suave)
+      currentPos = newPos;
+      setPlayerPosition(currentPos);
+      
+      // Verificar se pegou a chave
+      if (maze[currentPos.row][currentPos.col] === 'K' && !hasKey) {
+        setHasKey(true);
+      }
+      
+      // Aguardar animação de movimento terminar (300ms da animação CSS) + tempo para desfragmentação
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Remover o comando da fila após a animação usando o ID único
+      setCommandQueue(prev => prev.filter(item => {
+        const itemUniqueId = item.uniqueId;
+        return itemUniqueId !== cmdUniqueId;
+      }));
+      
+      // Remover da lista de animações
+      setAnimatingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(cmdUniqueId);
+        return newSet;
+      });
+      
+      // Aguardar um pouco antes do próximo movimento
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
 
     setIsExecuting(false);
+    setAnimatingIds(new Set());
   };
 
   const resetPosition = () => {
-    // Voltar para o primeiro mapa
-    if (selectedMaps.length > 0) {
-      const firstMaze = selectedMaps[0];
-      setMaze(firstMaze);
-      const startPos = calculateStartPosition(firstMaze);
-      setPlayerPosition(startPos);
-      setCurrentMapIndex(0);
-      setCompletedMaps(0);
-    } else {
-      const startPos = calculateStartPosition(maze);
-      setPlayerPosition(startPos);
-    }
+    // Selecionar novos mapas e voltar para o primeiro
+    const selected = selectNewMaps();
+    setSelectedMaps(selected);
+    const firstMaze = selected[0];
+    setMaze(firstMaze);
+    const startPos = calculateStartPosition(firstMaze);
+    setPlayerPosition(startPos);
+    setCurrentMapIndex(0);
+    setCompletedMaps(0);
     setCommandQueue([]);
     setIsExecuting(false);
     setTimer(0);
+    setPhaseTimes([0, 0, 0]);
+    setCurrentPhaseTimer(0);
+    currentPhaseTimerRef.current = 0;
+    accumulatedPhasesTimeRef.current = 0;
+    isProcessingPhaseCompletion.current = false;
+    setFinalTime(0);
+    finalTimeRef.current = 0;
     setIsTimerRunning(false);
     setHasKey(false);
   };
@@ -853,15 +1184,25 @@ const MazePage = () => {
    */
   const handleSubmitScore = () => {
     if (playerName.trim()) {
-      const finalTime = timer;
-      const timeString = `${Math.floor(finalTime / 60000)}:${Math.floor((finalTime % 60000) / 1000).toString().padStart(2, '0')}.${Math.floor((finalTime % 1000) / 10).toString().padStart(2, '0')}`;
+      // Usar o tempo final capturado quando o jogo foi completado
+      // Prioridade: finalTimeRef > finalTime > timerRef.current > timer
+      const timeToSave = finalTimeRef.current > 0 ? finalTimeRef.current : 
+                        (finalTime > 0 ? finalTime : 
+                        (timerRef.current > 0 ? timerRef.current : 
+                        (timer > 0 ? timer : 0)));
+      
+      // Se ainda não tiver tempo, usar um valor mínimo para não quebrar
+      const validTime = timeToSave > 0 ? timeToSave : 1;
+      
+      const timeString = `${Math.floor(validTime / 60000)}:${Math.floor((validTime % 60000) / 1000).toString().padStart(2, '0')}.${Math.floor((validTime % 1000) / 10).toString().padStart(2, '0')}`;
       
       const newEntry = {
         name: playerName.trim(),
-        time: finalTime,
+        time: validTime,
         timeString: timeString,
         date: new Date().toLocaleDateString('pt-BR'),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        difficulty: difficulty
       };
       
       const newRanking = [...ranking, newEntry]
@@ -869,7 +1210,12 @@ const MazePage = () => {
         .slice(0, 10);
       
       setRanking(newRanking);
-      localStorage.setItem('mazeRanking', JSON.stringify(newRanking));
+      const rankingKey = `mazeRanking-${difficulty}`;
+      localStorage.setItem(rankingKey, JSON.stringify(newRanking));
+      
+      // Fechar o modal primeiro
+      setShowCompletionModal(false);
+      setPlayerName('');
       
       // Resetar para o início - selecionar novos mapas
       setSelectedMaps([]);
@@ -878,9 +1224,14 @@ const MazePage = () => {
       setCommandQueue([]);
       setHasKey(false);
       setTimer(0);
+      setPhaseTimes([0, 0, 0]);
+      setCurrentPhaseTimer(0);
+      currentPhaseTimerRef.current = 0;
+      accumulatedPhasesTimeRef.current = 0;
+      isProcessingPhaseCompletion.current = false;
+      setFinalTime(0);
+      finalTimeRef.current = 0;
       setIsTimerRunning(false);
-      setShowCompletionModal(false);
-      setPlayerName('');
       // A posição será definida quando os novos mapas forem selecionados
     }
   };
@@ -892,7 +1243,8 @@ const MazePage = () => {
   const clearRanking = () => {
     if (window.confirm('Tem certeza que deseja limpar o ranking?')) {
       setRanking([]);
-      localStorage.removeItem('mazeRanking');
+      const rankingKey = `mazeRanking-${difficulty}`;
+      localStorage.removeItem(rankingKey);
     }
   };
 
@@ -908,14 +1260,27 @@ const MazePage = () => {
           const isPlayer = playerPosition.row === rowIndex && playerPosition.col === colIndex;
           const isEnd = cell === 'E';
           const isKey = cell === 'K';
+          const isPreview = previewPath.has(`${rowIndex},${colIndex}`) && !isPlayer;
+          
+          // Verificar se precisa de chave para completar
+          const needsKey = difficulty === 'hard' || (difficulty === 'medium' && completedMaps === 2);
+          const showLock = isEnd && needsKey && !hasKey;
           
           return (
             <div
               key={colIndex}
-              className={`maze-cell ${cell === '#' ? 'wall' : 'path'} ${isPlayer ? 'player' : ''} ${isEnd ? 'end' : ''} ${isKey ? 'key' : ''}`}
+              className={`maze-cell ${cell === '#' ? 'wall' : 'path'} ${isPlayer ? 'player' : ''} ${isEnd ? 'end' : ''} ${isKey ? 'key' : ''} ${isPreview ? 'preview-path' : ''}`}
             >
-              {isPlayer && <div className="player-char">😊</div>}
-              {isEnd && !isPlayer && <div className="end-char">🏁</div>}
+              {isPlayer && (
+                <div 
+                  key={`player-${playerPosition.row}-${playerPosition.col}`}
+                  className="player-char"
+                >
+                  😊
+                </div>
+              )}
+              {showLock && !isPlayer && <div className="lock-char">🔒</div>}
+              {isEnd && !isPlayer && !showLock && <div className="end-char">🏁</div>}
               {isKey && !isPlayer && !hasKey && <div className="key-char">🔑</div>}
             </div>
           );
@@ -927,29 +1292,47 @@ const MazePage = () => {
   return (
     <div className="maze-page">
       <div className="maze-header">
-        <h1>Labirinto de Programação</h1>
-        <p>Arraste os blocos ou use as setas do teclado para navegar e ESPAÇO para adicionar à fila</p>
-        <div className="timer-display">
-          <span className="timer-label">Tempo:</span>
-          <span className="timer-value">
-            {Math.floor(timer / 60000)}:{(Math.floor((timer % 60000) / 1000)).toString().padStart(2, '0')}.{Math.floor((timer % 1000) / 10).toString().padStart(2, '0')}
-          </span>
-          {isTimerRunning && <span className="timer-running">⏱️</span>}
+        <div className="header-top">
+          <h1>Labirinto de Programação</h1>
         </div>
-        <div className="progress-display">
-          <span className="progress-label">Mapa {currentMapIndex + 1}/3 | Completados: {completedMaps}/3</span>
-          {completedMaps === 2 && !hasKey && (
-            <span className="key-required">🔑 Pegue a chave para finalizar!</span>
-          )}
-          {hasKey && (
-            <span className="key-obtained">🔑 Chave obtida!</span>
-          )}
-        </div>
-        {gamepadConnected && (
-          <div className="gamepad-status">
-            Controle conectado! D-Pad: navegar | X: adicionar | Triângulo/R2: executar | L2: limpar | Share: resetar
+        <div className="header-info-container">
+          <div className="difficulty-badge">
+            {difficulty === 'easy' && '⭐ Fácil'}
+            {difficulty === 'medium' && '⭐⭐ Médio'}
+            {difficulty === 'hard' && '⭐⭐⭐ Difícil'}
           </div>
-        )}
+          <div className="timer-display">
+            <span className="timer-label">Tempo:</span>
+            <span className="timer-value">
+              {Math.floor(timer / 60000)}:{(Math.floor((timer % 60000) / 1000)).toString().padStart(2, '0')}.{Math.floor((timer % 1000) / 10).toString().padStart(2, '0')}
+            </span>
+            {isTimerRunning && <span className="timer-running">⏱️</span>}
+          </div>
+          <div className="progress-display">
+            <span className="progress-label">Mapa {currentMapIndex + 1}/3 | Completados: {completedMaps}/3</span>
+            {(difficulty === 'hard' || (difficulty === 'medium' && completedMaps === 2)) && !hasKey && (
+              <span className="key-required">🔑 Pegue a chave para finalizar!</span>
+            )}
+            {hasKey && (
+              <span className="key-obtained">🔑 Chave obtida!</span>
+            )}
+          </div>
+          <div className={`gamepad-status-display ${gamepadConnected ? 'connected' : 'disconnected'}`}>
+            <span className="gamepad-status-label">Controle:</span>
+            <span className="gamepad-status-value">
+              {gamepadConnected ? 'Conectado' : 'Desconectado'}
+            </span>
+          </div>
+          {onBackToLevelSelect && (
+            <button 
+              className="btn-back-levels" 
+              onClick={onBackToLevelSelect}
+              title="Voltar para seleção de níveis"
+            >
+              ← Voltar
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Modal de Conclusão */}
@@ -958,8 +1341,42 @@ const MazePage = () => {
           <div className="modal-content">
             <h2>Parabéns! Você completou os 3 mapas!</h2>
             <div className="modal-time">
-              Tempo: {Math.floor(timer / 60000)}:{(Math.floor((timer % 60000) / 1000)).toString().padStart(2, '0')}.{Math.floor((timer % 1000) / 10).toString().padStart(2, '0')}
+              Tempo Total: {(() => {
+                const displayTime = finalTimeRef.current > 0 ? finalTimeRef.current : 
+                                  (finalTime > 0 ? finalTime : 
+                                  (timerRef.current > 0 ? timerRef.current : timer));
+                return `${Math.floor(displayTime / 60000)}:${Math.floor((displayTime % 60000) / 1000).toString().padStart(2, '0')}.${Math.floor((displayTime % 1000) / 10).toString().padStart(2, '0')}`;
+              })()}
             </div>
+            
+            {/* Bloco de tempos por fase */}
+            <div className="modal-phases-times">
+              <h3>Tempos por Fase:</h3>
+              <div className="phases-times-list">
+                {phaseTimes.map((phaseTime, index) => {
+                  const formatTime = (time) => {
+                    if (time === 0) return '--:--.--';
+                    return `${Math.floor(time / 60000)}:${Math.floor((time % 60000) / 1000).toString().padStart(2, '0')}.${Math.floor((time % 1000) / 10).toString().padStart(2, '0')}`;
+                  };
+                  return (
+                    <div key={index} className="phase-time-item">
+                      <span className="phase-label">Fase {index + 1}:</span>
+                      <span className="phase-time-value">{formatTime(phaseTime)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="phases-total">
+                <span className="total-label">Total Calculado:</span>
+                <span className="total-time-value">
+                  {(() => {
+                    const totalCalculated = phaseTimes.reduce((sum, time) => sum + time, 0);
+                    return `${Math.floor(totalCalculated / 60000)}:${Math.floor((totalCalculated % 60000) / 1000).toString().padStart(2, '0')}.${Math.floor((totalCalculated % 1000) / 10).toString().padStart(2, '0')}`;
+                  })()}
+                </span>
+              </div>
+            </div>
+            
             <div className="modal-input-section">
               <label>Digite seu nome:</label>
               <input
@@ -992,7 +1409,7 @@ const MazePage = () => {
         {/* Ranking Sidebar */}
         <div className="ranking-sidebar">
           <div className="ranking-header">
-            <h3>Top 10</h3>
+            <h3>Top 10 - {difficulty === 'easy' ? 'Fácil' : difficulty === 'medium' ? 'Médio' : 'Difícil'}</h3>
             {ranking.length > 0 && (
               <button className="btn-clear-ranking" onClick={clearRanking} title="Limpar ranking">
                 🗑️
@@ -1041,30 +1458,6 @@ const MazePage = () => {
         </div>
 
         <div className="commands-section">
-          <div className="available-commands">
-            <h3>Blocos de Comando</h3>
-            <div className="commands-grid">
-              {availableCommands.map((cmd, index) => (
-                <div
-                  key={cmd.id}
-                  className={`command-block ${selectedBlockIndex === index ? 'selected' : ''}`}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, cmd)}
-                  onClick={() => {
-                    setSelectedBlockIndex(index);
-                  }}
-                >
-                  <div className="block-icon">{cmd.icon}</div>
-                  <div className="block-label">{cmd.label}</div>
-                  <div className="block-code">{cmd.command}</div>
-                  {selectedBlockIndex === index && (
-                    <div className="block-selected-indicator">✓ Selecionado</div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
           <div className="command-queue">
             <div className="queue-header">
               <h3>Fila de Comandos</h3>
@@ -1086,26 +1479,60 @@ const MazePage = () => {
                 </div>
               ) : (
                 <div className="queue-items">
-                  {commandQueue.map((cmd, index) => (
-                    <div
-                      key={index}
-                      className={`queue-item ${index === commandQueue.length - 1 ? 'queue-item-new' : ''}`}
-                      onDragOver={handleDragOver}
-                      onDrop={(e) => handleDrop(e, index)}
-                    >
-                      <span className="queue-number">{index + 1}</span>
-                      <span className="queue-icon">{cmd.icon}</span>
-                      <span className="queue-label">{cmd.label}</span>
-                      <button
-                        className="queue-remove"
-                        onClick={() => removeCommand(index)}
+                  {commandQueue.map((cmd, index) => {
+                    const cmdUniqueId = cmd.uniqueId !== undefined ? cmd.uniqueId : index;
+                    return (
+                      <div
+                        key={cmdUniqueId}
+                        className={`queue-item ${index === commandQueue.length - 1 ? 'queue-item-new' : ''} ${animatingIds.has(cmdUniqueId) ? 'queue-item-fragmenting' : ''} ${collidedIds.has(cmdUniqueId) ? 'queue-item-collision' : ''}`}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, index)}
                       >
-                        ×
-                      </button>
-                    </div>
-                  ))}
+                        <span className="queue-number">{index + 1}</span>
+                        <span className="queue-icon">{cmd.icon}</span>
+                        <span className="queue-label">{cmd.label}</span>
+                        <button
+                          className="queue-remove"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (!isExecuting && commandQueue.length > 0) {
+                              removeCommand();
+                            }
+                          }}
+                          disabled={isExecuting || commandQueue.length === 0}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
+            </div>
+          </div>
+
+          <div className="available-commands">
+            <h3>Blocos de Comando</h3>
+            <div className="commands-grid">
+              {availableCommands.map((cmd, index) => (
+                <div
+                  key={cmd.id}
+                  className={`command-block ${selectedBlockIndex === index ? 'selected' : ''}`}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, cmd)}
+                  onClick={() => {
+                    setSelectedBlockIndex(index);
+                  }}
+                >
+                  <div className="block-icon">{cmd.icon}</div>
+                  <div className="block-label">{cmd.label}</div>
+                  <div className="block-code">{cmd.command}</div>
+                  {selectedBlockIndex === index && (
+                    <div className="block-selected-indicator">✓ Selecionado</div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </div>
