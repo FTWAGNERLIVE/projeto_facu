@@ -1433,7 +1433,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
 
   return (
     <div className="maze-page">
-      <div className="maze-header">
+      <div className="maze-header"> 
         <div className="header-top">
           <h1>Labirinto de Programação</h1>
         </div>
