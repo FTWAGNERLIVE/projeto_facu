@@ -1,0 +1,16 @@
+{
+  "name": "projeto-faculdade-root",
+  "version": "1.0.0",
+  "description": "Scripts auxiliares para o projeto",
+  "scripts": {
+    "start": "cd Projeto_introdu-o_protugol && npm start",
+    "build": "cd Projeto_introdu-o_protugol && npm run build",
+    "test": "cd Projeto_introdu-o_protugol && npm test",
+    "install-deps": "cd Projeto_introdu-o_protugol && npm install"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  }
+}
+

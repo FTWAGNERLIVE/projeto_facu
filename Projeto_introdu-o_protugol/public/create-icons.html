@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gerador de Ícones PWA</title>
+</head>
+<body>
+    <h1>Gerador de Ícones PWA</h1>
+    <p>Abra o console do navegador (F12) e execute o código abaixo para gerar os ícones:</p>
+    <pre>
+// Cole este código no console do navegador (F12)
+
+function createIcon(size) {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    
+    // Fundo gradiente roxo
+    const gradient = ctx.createLinearGradient(0, 0, size, size);
+    gradient.addColorStop(0, '#667eea');
+    gradient.addColorStop(1, '#764ba2');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+    
+    // Texto "Q" no centro
+    ctx.fillStyle = 'white';
+    ctx.font = `bold ${size * 0.6}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Q', size / 2, size / 2);
+    
+    // Download
+    canvas.toBlob(function(blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `logo${size}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+}
+
+// Gerar ambos os ícones
+createIcon(192);
+setTimeout(() => createIcon(512), 500);
+    </pre>
+    <p>Ou use um gerador online: <a href="https://realfavicongenerator.net/" target="_blank">RealFaviconGenerator</a></p>
+</body>
+</html>
+

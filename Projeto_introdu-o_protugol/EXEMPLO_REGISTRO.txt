@@ -1,0 +1,60 @@
+===============================================
+        EXEMPLO DE REGISTRO DE NOTAS
+        Quiz Portugol - Jogo Educativo
+===============================================
+
+Formato: TIMESTAMP | NOME | NOTA/TOTAL | PORCENTAGEM | DATA
+===============================================
+
+2024-01-15T10:30:45.123Z | João Silva | 8/10 | 80% | 15/01/2024
+2024-01-15T11:15:22.456Z | Maria Santos | 9/10 | 90% | 15/01/2024
+2024-01-15T14:20:33.789Z | Pedro Costa | 7/10 | 70% | 15/01/2024
+2024-01-15T16:45:12.321Z | Ana Oliveira | 10/10 | 100% | 15/01/2024
+2024-01-15T18:30:55.654Z | Carlos Lima | 6/10 | 60% | 15/01/2024
+
+===============================================
+        COMO FUNCIONA O SISTEMA
+===============================================
+
+1. ARQUIVO INDIVIDUAL (por participante):
+   - Nome: quiz_result_[NOME]_[TIMESTAMP].txt
+   - Contém: resultado detalhado com todas as respostas
+   - Baixado automaticamente após completar o quiz
+
+2. ARQUIVO DE REGISTRO GERAL:
+   - Nome: REGISTRO_QUIZ_ATUALIZADO.txt
+   - Contém: lista simples com todos os participantes
+   - Baixado automaticamente após cada quiz
+
+3. RANKING COMPLETO:
+   - Nome: RANKING_QUIZ_[DATA].txt
+   - Contém: ranking ordenado + estatísticas
+   - Baixado manualmente clicando em "Exportar Ranking"
+
+===============================================
+        FUNCIONALIDADES IMPLEMENTADAS
+===============================================
+
+✅ Registro automático de cada participante
+✅ Download automático de relatório individual
+✅ Download automático de registro geral
+✅ Exportação manual do ranking completo
+✅ Estatísticas gerais (média, maior, menor pontuação)
+✅ Detalhamento de todas as respostas
+✅ Timestamp para controle temporal
+✅ Formatação organizada e legível
+
+===============================================
+        COMO USAR
+===============================================
+
+1. O participante completa o quiz
+2. Digite o nome quando solicitado
+3. O sistema automaticamente:
+   - Salva no localStorage (ranking na tela)
+   - Baixa arquivo individual detalhado
+   - Baixa arquivo de registro geral
+4. Para exportar ranking completo:
+   - Clique em "Exportar Ranking" na tela de resultados
+
+===============================================

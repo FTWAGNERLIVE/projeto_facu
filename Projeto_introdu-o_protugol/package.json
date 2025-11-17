@@ -1,0 +1,33 @@
+{
+  "name": "quiz-portugol",
+  "version": "1.0.0",
+  "description": "Quiz de Lógica de Programação em Portugol",
+  "main": "index.js",
+  "scripts": {
+    "start": "cross-env NODE_OPTIONS=\"--localstorage-file=./.localstorage\" HOST=0.0.0.0 react-scripts start",
+    "build": "cross-env NODE_OPTIONS=\"--localstorage-file=./.localstorage\" react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "dependencies": {
+    "qrcode.react": "^4.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0"
+  }
+}
