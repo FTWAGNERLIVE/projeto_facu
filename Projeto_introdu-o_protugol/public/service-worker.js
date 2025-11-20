@@ -1,7 +1,7 @@
 // Service Worker para PWA
 // Permite que o app funcione offline
 
-const CACHE_NAME = 'quiz-portugol-v1';
+const CACHE_NAME = 'quiz-portugol-v2';
 const urlsToCache = [
   '/',
   '/static/js/bundle.js',

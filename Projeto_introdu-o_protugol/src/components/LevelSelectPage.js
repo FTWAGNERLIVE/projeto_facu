@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { DIFFICULTY, DIFFICULTY_NAMES, DIFFICULTY_STARS, GAMEPAD_CONFIG } from '../constants/gameConstants';
 import './LevelSelectPage.css';
 
 const LevelSelectPage = ({ onSelectLevel }) => {
@@ -19,13 +20,13 @@ const LevelSelectPage = ({ onSelectLevel }) => {
   // Detectar controle conectado
   useEffect(() => {
     const handleGamepadConnected = (e) => {
-      console.log('Gamepad conectado na seleção de níveis:', e.gamepad.id);
+      console.log('✅ Gamepad conectado na seleção de níveis:', e.gamepad.id);
       console.log('Índice:', e.gamepad.index);
       gamepadIndex.current = e.gamepad.index;
     };
 
     const handleGamepadDisconnected = () => {
-      console.log('Gamepad desconectado na seleção de níveis');
+      console.log('❌ Gamepad desconectado na seleção de níveis');
       gamepadIndex.current = null;
       if (gamepadPollInterval.current) {
         clearInterval(gamepadPollInterval.current);
@@ -33,22 +34,44 @@ const LevelSelectPage = ({ onSelectLevel }) => {
       }
     };
 
+    // Função para verificar gamepads manualmente
+    const checkGamepads = () => {
+      const gamepads = navigator.getGamepads();
+      for (let i = 0; i < gamepads.length; i++) {
+        if (gamepads[i]) {
+          console.log(`🎮 Gamepad encontrado na seleção de níveis (índice ${i}):`, gamepads[i].id);
+          if (gamepadIndex.current !== i) {
+            gamepadIndex.current = i;
+          }
+          return true;
+        }
+      }
+      return false;
+    };
+
     window.addEventListener('gamepadconnected', handleGamepadConnected);
     window.addEventListener('gamepaddisconnected', handleGamepadDisconnected);
 
-    const gamepads = navigator.getGamepads();
-    console.log('Verificando gamepads na seleção de níveis...');
-    for (let i = 0; i < gamepads.length; i++) {
-      if (gamepads[i]) {
-        console.log(`Gamepad encontrado no índice ${i}:`, gamepads[i].id);
-        gamepadIndex.current = i;
-        break;
+    // Verificar imediatamente se já há um gamepad conectado
+    console.log('🔍 Verificando gamepads na seleção de níveis...');
+    checkGamepads();
+    
+    // Verificar periodicamente (alguns navegadores não disparam o evento imediatamente)
+    const checkInterval = setInterval(() => {
+      if (gamepadIndex.current === null) {
+        checkGamepads();
       }
-    }
+    }, 1000);
+
+    // Limpar intervalo após 10 segundos (evitar verificação infinita)
+    setTimeout(() => {
+      clearInterval(checkInterval);
+    }, 10000);
 
     return () => {
       window.removeEventListener('gamepadconnected', handleGamepadConnected);
       window.removeEventListener('gamepaddisconnected', handleGamepadDisconnected);
+      clearInterval(checkInterval);
       if (gamepadPollInterval.current) {
         clearInterval(gamepadPollInterval.current);
       }
@@ -72,8 +95,14 @@ const LevelSelectPage = ({ onSelectLevel }) => {
       const buttons = gamepad.buttons;
       const axes = gamepad.axes;
 
-      // D-Pad Left ou Analógico Left
-      if ((buttons[14] && buttons[14].pressed) || (axes[6] && axes[6] < -0.5)) {
+      // Threshold para considerar movimento do analógico (evitar drift)
+      const analogThreshold = GAMEPAD_CONFIG.ANALOG_THRESHOLD;
+
+      // Analógico esquerdo ou D-Pad Left (eixo 0 < -threshold ou eixo 6 < -threshold ou botão 14)
+      const analogLeft = axes[0] && axes[0] < -analogThreshold;
+      const dpadLeft = (buttons[14] && buttons[14].pressed) || (axes[6] && axes[6] < -analogThreshold);
+      
+      if (analogLeft || dpadLeft) {
         if (!lastButtonStates.current.dpadLeft) {
           setSelectedIndex(prev => (prev > 0 ? prev - 1 : prev));
           lastButtonStates.current.dpadLeft = true;
@@ -82,8 +111,11 @@ const LevelSelectPage = ({ onSelectLevel }) => {
         lastButtonStates.current.dpadLeft = false;
       }
 
-      // D-Pad Right ou Analógico Right
-      if ((buttons[15] && buttons[15].pressed) || (axes[6] && axes[6] > 0.5)) {
+      // Analógico esquerdo ou D-Pad Right (eixo 0 > threshold ou eixo 6 > threshold ou botão 15)
+      const analogRight = axes[0] && axes[0] > analogThreshold;
+      const dpadRight = (buttons[15] && buttons[15].pressed) || (axes[6] && axes[6] > analogThreshold);
+      
+      if (analogRight || dpadRight) {
         if (!lastButtonStates.current.dpadRight) {
           setSelectedIndex(prev => (prev < 2 ? prev + 1 : prev));
           lastButtonStates.current.dpadRight = true;
@@ -95,7 +127,7 @@ const LevelSelectPage = ({ onSelectLevel }) => {
       // X (botão 0) ou A - Selecionar nível
       if (buttons[0] && buttons[0].pressed) {
         if (!lastButtonStates.current.buttonX) {
-          const levelToSelect = selectedIndex === 0 ? 'easy' : selectedIndex === 1 ? 'medium' : 'hard';
+          const levelToSelect = selectedIndex === 0 ? DIFFICULTY.EASY : selectedIndex === 1 ? DIFFICULTY.MEDIUM : DIFFICULTY.HARD;
           onSelectLevel(levelToSelect);
           lastButtonStates.current.buttonX = true;
         }
@@ -129,7 +161,7 @@ const LevelSelectPage = ({ onSelectLevel }) => {
         case 'Enter':
         case ' ':
           e.preventDefault();
-          const levelToSelect = selectedIndex === 0 ? 'easy' : selectedIndex === 1 ? 'medium' : 'hard';
+          const levelToSelect = selectedIndex === 0 ? DIFFICULTY.EASY : selectedIndex === 1 ? DIFFICULTY.MEDIUM : DIFFICULTY.HARD;
           onSelectLevel(levelToSelect);
           break;
         default:
@@ -150,10 +182,10 @@ const LevelSelectPage = ({ onSelectLevel }) => {
         <div className="levels-grid">
           <div 
             className={`level-card ${selectedIndex === 0 ? 'selected' : ''}`} 
-            onClick={() => onSelectLevel('easy')}
+            onClick={() => onSelectLevel(DIFFICULTY.EASY)}
           >
-            <div className="level-icon easy">⭐</div>
-            <h2>Fácil</h2>
+            <div className="level-icon easy">{DIFFICULTY_STARS[DIFFICULTY.EASY]}</div>
+            <h2>{DIFFICULTY_NAMES[DIFFICULTY.EASY]}</h2>
             <p className="level-description">
               Preview visual do caminho conforme você monta os comandos
             </p>
@@ -167,16 +199,16 @@ const LevelSelectPage = ({ onSelectLevel }) => {
 
           <div 
             className={`level-card ${selectedIndex === 1 ? 'selected' : ''}`} 
-            onClick={() => onSelectLevel('medium')}
+            onClick={() => onSelectLevel(DIFFICULTY.MEDIUM)}
           >
-            <div className="level-icon medium">⭐⭐</div>
-            <h2>Médio</h2>
+            <div className="level-icon medium">{DIFFICULTY_STARS[DIFFICULTY.MEDIUM]}</div>
+            <h2>{DIFFICULTY_NAMES[DIFFICULTY.MEDIUM]}</h2>
             <p className="level-description">
               Jogo padrão com desafio equilibrado
             </p>
             <div className="level-features">
               <span>✓ Mapas médios</span>
-              <span>✓ Alguns mapas com chave</span>
+              <span>✓ Sem ajuda visual</span>
               <span>✓ Desafio moderado</span>
             </div>
             {selectedIndex === 1 && <div className="selection-indicator">← Selecionado →</div>}
@@ -184,10 +216,10 @@ const LevelSelectPage = ({ onSelectLevel }) => {
 
           <div 
             className={`level-card ${selectedIndex === 2 ? 'selected' : ''}`} 
-            onClick={() => onSelectLevel('hard')}
+            onClick={() => onSelectLevel(DIFFICULTY.HARD)}
           >
-            <div className="level-icon hard">⭐⭐⭐</div>
-            <h2>Difícil</h2>
+            <div className="level-icon hard">{DIFFICULTY_STARS[DIFFICULTY.HARD]}</div>
+            <h2>{DIFFICULTY_NAMES[DIFFICULTY.HARD]}</h2>
             <p className="level-description">
               Mapas maiores e todos requerem chave para completar
             </p>

@@ -13,6 +13,21 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import {
+  DIFFICULTY,
+  DIFFICULTY_NAMES,
+  DIFFICULTY_STARS,
+  MAP_CONFIG,
+  TOTAL_MAPS,
+  TIMER_CONFIG,
+  GAMEPAD_CONFIG,
+  ANIMATION_CONFIG,
+  RANKING_CONFIG,
+  MAP_SYMBOLS,
+  AVAILABLE_COMMANDS,
+  DIRECTIONS
+} from '../constants/gameConstants';
+import { MAZES_8X8, MAZES_10X10 } from '../data/mazeData';
 import './MazePage.css';
 
 const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
@@ -27,6 +42,8 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
   const [playerFacing, setPlayerFacing] = useState('down');
   // Indica se o personagem está andando
   const [isWalking, setIsWalking] = useState(false);
+  // Frame atual da animação (1, 2, ou 3)
+  const [animationFrame, setAnimationFrame] = useState(1);
   // Fila de comandos a serem executados (com ID único para cada comando)
   const [commandQueue, setCommandQueue] = useState([]);
   // Indica se o jogo foi iniciado (primeiro comando adicionado pelo usuário)
@@ -37,6 +54,8 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
   const [isExecuting, setIsExecuting] = useState(false);
   // Indica se está carregando o próximo mapa (transição entre fases)
   const [isLoadingMap, setIsLoadingMap] = useState(false);
+  // Indica se está carregando o mapa inicial
+  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
   // IDs dos comandos que estão sendo animados (desfragmentando)
   const [animatingIds, setAnimatingIds] = useState(new Set());
   // IDs dos comandos que colidiram com parede (animação vermelha)
@@ -81,6 +100,8 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
   const isProcessingPhaseCompletion = useRef(false);
   
   // ========== ESTADOS DO SISTEMA DE MAPAS ==========
+  // Mapa atual sendo jogado
+  const [maze, setMaze] = useState([]);
   // Índice do mapa atual (0, 1 ou 2)
   const [currentMapIndex, setCurrentMapIndex] = useState(0);
   // Quantidade de mapas completados (0 a 3)
@@ -101,214 +122,9 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
   const [finalTime, setFinalTime] = useState(0);
   
   // ========== MAPAS DO JOGO ==========
-  // Array com todos os mapas disponíveis (18 mapas diferentes)
-  // Cada mapa é uma matriz 8x8 onde:
-  // '#' = parede (não pode passar)
-  // ' ' = caminho livre
-  // 'E' = destino final
-  // 'K' = chave (necessária no 3º mapa)
-  const allMazes = [
-    // Mapa 1 - Destino no canto superior direito
-    [
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['#', ' ', ' ', ' ', '#', ' ', ' ', 'E'],
-      ['#', ' ', '#', ' ', '#', ' ', '#', '#'],
-      ['#', ' ', ' ', ' ', ' ', ' ', ' ', '#'],
-      ['#', '#', '#', ' ', '#', '#', ' ', '#'],
-      ['#', ' ', ' ', ' ', ' ', ' ', ' ', '#'],
-      ['#', ' ', '#', '#', '#', '#', ' ', '#'],
-      ['#', '#', '#', '#', '#', '#', '#', '#']
-    ],
-    // Mapa 2 - Destino no centro superior
-    [
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['#', ' ', ' ', ' ', 'E', ' ', ' ', '#'],
-      ['#', ' ', '#', '#', '#', '#', ' ', '#'],
-      ['#', ' ', ' ', ' ', ' ', ' ', ' ', '#'],
-      ['#', '#', ' ', '#', '#', ' ', '#', '#'],
-      ['#', ' ', ' ', ' ', ' ', ' ', ' ', '#'],
-      ['#', ' ', '#', '#', '#', '#', ' ', '#'],
-      ['#', '#', '#', '#', '#', '#', '#', '#']
-    ],
-    // Mapa 3 - Destino no meio direito (com chave)
-    [
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['#', ' ', ' ', ' ', '#', ' ', ' ', '#'],
-      ['#', ' ', '#', ' ', '#', ' ', '#', '#'],
-      ['#', ' ', ' ', ' ', ' ', ' ', ' ', 'E'],
-      ['#', '#', '#', ' ', '#', '#', ' ', '#'],
-      ['#', ' ', ' ', ' ', ' ', '#', ' ', '#'],
-      ['#', 'K', '#', '#', '#', '#', ' ', '#'],
-      ['#', '#', '#', '#', '#', '#', '#', '#']
-    ],
-    // Mapa 4 - Destino no canto inferior esquerdo
-    [
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['#', ' ', '#', ' ', ' ', ' ', ' ', '#'],
-      ['#', ' ', '#', ' ', '#', '#', ' ', '#'],
-      ['#', ' ', '#', ' ', ' ', '#', ' ', '#'],
-      ['#', ' ', '#', '#', ' ', ' ', ' ', '#'],
-      ['#', ' ', ' ', ' ', ' ', '#', ' ', '#'],
-      ['E', ' ', '#', '#', '#', '#', ' ', '#'],
-      ['#', '#', '#', '#', '#', '#', '#', '#']
-    ],
-    // Mapa 5 - Destino no centro
-    [
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['#', ' ', ' ', ' ', '#', ' ', ' ', '#'],
-      ['#', '#', '#', ' ', '#', ' ', '#', '#'],
-      ['#', ' ', ' ', ' ', 'E', ' ', ' ', '#'],
-      ['#', ' ', '#', '#', '#', '#', ' ', '#'],
-      ['#', ' ', ' ', ' ', ' ', ' ', ' ', '#'],
-      ['#', ' ', '#', ' ', '#', '#', '#', '#'],
-      ['#', '#', '#', '#', '#', '#', '#', '#']
-    ],
-    // Mapa 6 - Destino no meio esquerdo
-    [
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['#', ' ', ' ', ' ', ' ', ' ', ' ', '#'],
-      ['#', ' ', '#', '#', '#', '#', ' ', '#'],
-      ['E', ' ', ' ', ' ', ' ', ' ', ' ', '#'],
-      ['#', '#', ' ', '#', '#', ' ', '#', '#'],
-      ['#', ' ', ' ', ' ', ' ', ' ', ' ', '#'],
-      ['#', ' ', '#', '#', '#', '#', ' ', '#'],
-      ['#', '#', '#', '#', '#', '#', '#', '#']
-    ],
-    // Mapa 7 - Destino no canto superior esquerdo
-    [
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['E', ' ', ' ', '#', ' ', ' ', ' ', '#'],
-      ['#', ' ', '#', '#', ' ', '#', ' ', '#'],
-      ['#', ' ', ' ', ' ', ' ', '#', ' ', '#'],
-      ['#', '#', '#', ' ', ' ', ' ', ' ', '#'],
-      ['#', ' ', ' ', ' ', '#', '#', ' ', '#'],
-      ['#', ' ', '#', '#', '#', '#', ' ', '#'],
-      ['#', '#', '#', '#', '#', '#', '#', '#']
-    ],
-    // Mapa 8 - Destino no meio inferior
-    [
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['#', ' ', ' ', ' ', ' ', '#', ' ', '#'],
-      ['#', ' ', '#', '#', ' ', '#', ' ', '#'],
-      ['#', ' ', ' ', '#', ' ', ' ', ' ', '#'],
-      ['#', '#', ' ', '#', '#', '#', ' ', '#'],
-      ['#', ' ', ' ', ' ', ' ', ' ', ' ', '#'],
-      ['#', ' ', '#', '#', 'E', '#', ' ', '#'],
-      ['#', '#', '#', '#', '#', '#', '#', '#']
-    ],
-    // Mapa 9 - Destino no canto inferior direito
-    [
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['#', ' ', ' ', '#', ' ', ' ', ' ', '#'],
-      ['#', ' ', '#', '#', ' ', '#', '#', '#'],
-      ['#', ' ', ' ', ' ', ' ', ' ', ' ', '#'],
-      ['#', '#', '#', ' ', '#', '#', ' ', '#'],
-      ['#', ' ', ' ', ' ', ' ', ' ', ' ', '#'],
-      ['#', ' ', '#', '#', '#', '#', ' ', 'E'],
-      ['#', '#', '#', '#', '#', '#', '#', '#']
-    ],
-    // Mapa 10 - Destino no meio esquerdo superior
-    [
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['#', ' ', ' ', ' ', ' ', ' ', ' ', '#'],
-      ['E', ' ', '#', '#', '#', '#', ' ', '#'],
-      ['#', ' ', ' ', ' ', ' ', '#', ' ', '#'],
-      ['#', '#', '#', ' ', ' ', ' ', ' ', '#'],
-      ['#', ' ', ' ', ' ', '#', '#', ' ', '#'],
-      ['#', ' ', '#', '#', '#', '#', ' ', '#'],
-      ['#', '#', '#', '#', '#', '#', '#', '#']
-    ],
-    // Mapa 11 - Destino no centro direito
-    [
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['#', ' ', '#', ' ', ' ', ' ', ' ', '#'],
-      ['#', ' ', '#', ' ', '#', '#', ' ', '#'],
-      ['#', ' ', ' ', ' ', ' ', '#', ' ', 'E'],
-      ['#', '#', '#', '#', ' ', ' ', ' ', '#'],
-      ['#', ' ', ' ', ' ', ' ', '#', ' ', '#'],
-      ['#', ' ', '#', '#', '#', '#', ' ', '#'],
-      ['#', '#', '#', '#', '#', '#', '#', '#']
-    ],
-    // Mapa 12 - Destino no meio esquerdo inferior (mais difícil)
-    [
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['#', ' ', ' ', ' ', '#', ' ', ' ', '#'],
-      ['#', ' ', '#', ' ', '#', ' ', '#', '#'],
-      ['#', ' ', ' ', ' ', ' ', ' ', ' ', '#'],
-      ['#', '#', '#', ' ', '#', '#', ' ', '#'],
-      ['#', ' ', ' ', ' ', ' ', ' ', ' ', '#'],
-      ['E', ' ', '#', '#', '#', '#', ' ', '#'],
-      ['#', '#', '#', '#', '#', '#', '#', '#']
-    ],
-    // Mapa 13 - Mais complexo, destino no topo
-    [
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['#', ' ', ' ', 'E', ' ', ' ', ' ', '#'],
-      ['#', ' ', '#', '#', '#', '#', ' ', '#'],
-      ['#', ' ', ' ', ' ', ' ', '#', ' ', '#'],
-      ['#', '#', '#', ' ', ' ', ' ', ' ', '#'],
-      ['#', ' ', ' ', ' ', '#', '#', ' ', '#'],
-      ['#', ' ', '#', '#', '#', '#', ' ', '#'],
-      ['#', '#', '#', '#', '#', '#', '#', '#']
-    ],
-    // Mapa 14 - Labirinto em espiral, destino no centro (com chave)
-    [
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['#', ' ', ' ', ' ', ' ', ' ', ' ', '#'],
-      ['#', ' ', '#', '#', '#', '#', ' ', '#'],
-      ['#', ' ', '#', ' ', 'E', '#', ' ', '#'],
-      ['#', ' ', '#', ' ', '#', '#', ' ', '#'],
-      ['#', 'K', '#', ' ', ' ', ' ', ' ', '#'],
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['#', '#', '#', '#', '#', '#', '#', '#']
-    ],
-    // Mapa 15 - Múltiplos caminhos, destino no canto (com chave)
-    [
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['#', ' ', ' ', ' ', ' ', ' ', ' ', '#'],
-      ['#', ' ', '#', '#', ' ', '#', '#', '#'],
-      ['#', ' ', ' ', '#', ' ', ' ', ' ', '#'],
-      ['#', '#', ' ', '#', '#', '#', ' ', '#'],
-      ['#', ' ', ' ', ' ', '#', ' ', ' ', '#'],
-      ['#', 'K', '#', '#', '#', '#', ' ', 'E'],
-      ['#', '#', '#', '#', '#', '#', '#', '#']
-    ],
-    // Mapa 16 - Mais difícil, destino no meio direito (com chave)
-    [
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['#', ' ', '#', ' ', ' ', ' ', '#', '#'],
-      ['#', ' ', '#', ' ', '#', ' ', ' ', '#'],
-      ['#', ' ', ' ', ' ', '#', ' ', ' ', 'E'],
-      ['#', '#', '#', ' ', ' ', ' ', '#', '#'],
-      ['#', ' ', ' ', ' ', '#', ' ', ' ', '#'],
-      ['#', 'K', '#', '#', '#', '#', ' ', '#'],
-      ['#', '#', '#', '#', '#', '#', '#', '#']
-    ],
-    // Mapa 17 - Complexo com chave no meio
-    [
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['#', ' ', ' ', ' ', '#', ' ', ' ', '#'],
-      ['#', ' ', '#', ' ', '#', ' ', '#', '#'],
-      ['#', ' ', ' ', 'K', ' ', ' ', ' ', 'E'],
-      ['#', '#', '#', ' ', '#', '#', ' ', '#'],
-      ['#', ' ', ' ', ' ', ' ', ' ', ' ', '#'],
-      ['#', ' ', '#', '#', '#', '#', ' ', '#'],
-      ['#', '#', '#', '#', '#', '#', '#', '#']
-    ],
-    // Mapa 18 - Muito difícil, destino no topo (com chave)
-    [
-      ['#', '#', '#', '#', '#', '#', '#', '#'],
-      ['#', ' ', ' ', 'E', ' ', ' ', ' ', '#'],
-      ['#', ' ', '#', '#', '#', '#', ' ', '#'],
-      ['#', ' ', ' ', ' ', ' ', '#', ' ', '#'],
-      ['#', '#', '#', ' ', ' ', ' ', ' ', '#'],
-      ['#', ' ', ' ', ' ', '#', '#', ' ', '#'],
-      ['#', ' ', '#', '#', '#', '#', ' ', '#'],
-      ['#', 'K', '#', '#', '#', '#', '#', '#']
-    ]
-  ];
-
-  const [maze, setMaze] = useState(allMazes[0]);
+  // Usar mapas importados do arquivo de dados
+  const allMazes = MAZES_8X8;
+  const allMazes10x10 = MAZES_10X10;
 
   // ========== FUNÇÕES AUXILIARES ==========
   
@@ -317,7 +133,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
    * @returns {Set} - Set com as posições que serão percorridas
    */
   const calculatePreviewPath = () => {
-    if (difficulty !== 'easy' || commandQueue.length === 0) {
+    if (difficulty !== DIFFICULTY.EASY || commandQueue.length === 0 || !maze || maze.length === 0 || !maze[0]) {
       return new Set();
     }
 
@@ -331,22 +147,22 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
       let newPos = { ...currentPos };
 
       switch (cmd.id) {
-        case 'up':
+        case DIRECTIONS.UP:
           if (currentPos.row > 0) {
             newPos.row = currentPos.row - 1;
           }
           break;
-        case 'down':
+        case DIRECTIONS.DOWN:
           if (currentPos.row < maze.length - 1) {
             newPos.row = currentPos.row + 1;
           }
           break;
-        case 'left':
+        case DIRECTIONS.LEFT:
           if (currentPos.col > 0) {
             newPos.col = currentPos.col - 1;
           }
           break;
-        case 'right':
+        case DIRECTIONS.RIGHT:
           if (currentPos.col < maze[0].length - 1) {
             newPos.col = currentPos.col + 1;
           }
@@ -358,7 +174,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
       // Verificar se é movimento válido
       if (newPos.row >= 0 && newPos.row < maze.length &&
           newPos.col >= 0 && newPos.col < maze[0].length &&
-          maze[newPos.row][newPos.col] !== '#') {
+          maze[newPos.row][newPos.col] !== MAP_SYMBOLS.WALL) {
         currentPos = newPos;
         path.add(`${currentPos.row},${currentPos.col}`);
       } else {
@@ -375,28 +191,20 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
    * @returns {Array} - Array com 3 mapas selecionados
    */
   const selectNewMaps = () => {
-    if (difficulty === 'hard') {
-      // Nível difícil: todos os mapas precisam de chave
-      const mapsWithKey = allMazes.filter((m, idx) => m.some(row => row.includes('K')));
-      const shuffled = [...mapsWithKey].sort(() => Math.random() - 0.5);
+    if (difficulty === DIFFICULTY.HARD) {
+      // Nível difícil: usar mapas 10x10, todos com chave obrigatória
+      const shuffled = [...allMazes10x10].sort(() => Math.random() - 0.5);
       return [shuffled[0], shuffled[1], shuffled[2]];
-    } else if (difficulty === 'easy') {
-      // Nível fácil: mapas menores, sem chave
-      const mapsWithoutKey = allMazes.filter((m, idx) => !m.some(row => row.includes('K')));
+    } else if (difficulty === DIFFICULTY.EASY) {
+      // Nível fácil: mapas 8x8 menores, sem chave
+      const mapsWithoutKey = allMazes.filter((m, idx) => !m.some(row => row.includes(MAP_SYMBOLS.KEY)));
       const shuffled = [...mapsWithoutKey].sort(() => Math.random() - 0.5);
       return [shuffled[0], shuffled[1], shuffled[2] || shuffled[0]];
     } else {
-      // Nível médio: padrão atual (2 sem chave + 1 com chave)
-      const mapsWithoutKey = allMazes.filter((m, idx) => !m.some(row => row.includes('K')));
-      const mapsWithKey = allMazes.filter((m, idx) => m.some(row => row.includes('K')));
-      
+      // Nível médio: mapas 8x8 padrão, todos sem chave
+      const mapsWithoutKey = allMazes.filter((m, idx) => !m.some(row => row.includes(MAP_SYMBOLS.KEY)));
       const shuffled = [...mapsWithoutKey].sort(() => Math.random() - 0.5);
-      const selected = [shuffled[0], shuffled[1]];
-      
-      const keyMap = mapsWithKey[Math.floor(Math.random() * mapsWithKey.length)];
-      selected.push(keyMap);
-      
-      return selected;
+      return [shuffled[0], shuffled[1], shuffled[2] || shuffled[0]];
     }
   };
   
@@ -411,7 +219,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
     let endCol = -1;
     for (let i = 0; i < mazeLayout.length; i++) {
       for (let j = 0; j < mazeLayout[i].length; j++) {
-        if (mazeLayout[i][j] === 'E') {
+        if (mazeLayout[i][j] === MAP_SYMBOLS.END) {
           endRow = i;
           endCol = j;
           break;
@@ -430,7 +238,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
     for (let i = 0; i < mazeLayout.length; i++) {
       for (let j = 0; j < mazeLayout[i].length; j++) {
         const cell = mazeLayout[i][j];
-        if (cell === ' ' || cell === 'S') { // S pode ser usado como ponto de início marcado
+        if (cell === MAP_SYMBOLS.PATH || cell === MAP_SYMBOLS.START) { // S pode ser usado como ponto de início marcado
           validPositions.push({ row: i, col: j });
         }
       }
@@ -467,8 +275,22 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
     }
   }, [difficulty]);
 
+  // Resetar carregamento inicial quando a dificuldade mudar
+  useEffect(() => {
+      setIsLoadingInitial(true);
+      setTimeout(() => {
+        setIsLoadingInitial(false);
+      }, TIMER_CONFIG.INITIAL_LOADING_DELAY);
+  }, [difficulty]);
+
+  // Resetar mapas quando a dificuldade mudar
+  useEffect(() => {
+    setSelectedMaps([]);
+  }, [difficulty]);
+
   // Selecionar 3 mapas aleatórios no início baseado na dificuldade
   useEffect(() => {
+    // Resetar mapas quando a dificuldade mudar ou quando não houver mapas selecionados
     if (selectedMaps.length === 0) {
       const selected = selectNewMaps();
       setSelectedMaps(selected);
@@ -478,13 +300,25 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
       setPlayerPosition(startPos);
       setPreviousPosition(startPos);
       setCurrentMapIndex(0);
+      setCompletedMaps(0);
+      setHasKey(false);
+      setCommandQueue([]);
+      setGameStarted(false);
+      // Iniciar com Forward1.png (frame 1, direção down)
+      setPlayerFacing('down');
+      setAnimationFrame(1);
       // Resetar estados dos botões para evitar comandos automáticos
       lastButtonStates.current = {};
       // Marcar que o componente foi montado após um pequeno delay (evitar comandos automáticos)
       isComponentMounted.current = false;
       setTimeout(() => {
         isComponentMounted.current = true;
-      }, 500);
+      }, ANIMATION_CONFIG.COMMAND_DELAY * 2.5);
+      
+      // Esconder o carregamento inicial após um delay
+      setTimeout(() => {
+        setIsLoadingInitial(false);
+      }, TIMER_CONFIG.INITIAL_LOADING_DELAY);
     }
   }, [selectedMaps.length, difficulty]);
 
@@ -493,7 +327,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
     // Não atualizar preview durante a execução para evitar piscar
     if (isExecuting) return;
     
-    if (difficulty === 'easy' && commandQueue.length > 0) {
+    if (difficulty === DIFFICULTY.EASY && commandQueue.length > 0) {
       const path = calculatePreviewPath();
       setPreviewPath(path);
     } else {
@@ -501,13 +335,8 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
     }
   }, [commandQueue.length, playerPosition.row, playerPosition.col, maze, difficulty, isExecuting]);
 
-  const availableCommands = [
-    { id: 'up', label: 'Mover para Cima', command: 'y := y - 1', icon: '↑' },
-    { id: 'down', label: 'Mover para Baixo', command: 'y := y + 1', icon: '↓' },
-    { id: 'left', label: 'Mover para Esquerda', command: 'x := x - 1', icon: '←' },
-    { id: 'right', label: 'Mover para Direita', command: 'x := x + 1', icon: '→' }
-    
-  ];
+  // Usar comandos importados das constantes
+  const availableCommands = AVAILABLE_COMMANDS;
 
   // ========== REFS PARA HOOKS ==========
   // Refs são usados para acessar valores atualizados dentro de useEffect
@@ -567,19 +396,19 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
       // Timer total (para exibição)
       timerInterval.current = setInterval(() => {
         setTimer(prev => {
-          const newValue = prev + 10;
+          const newValue = prev + TIMER_CONFIG.INTERVAL_MS;
           timerRef.current = newValue;
           return newValue;
         });
-      }, 10);
+      }, TIMER_CONFIG.INTERVAL_MS);
       
       // Timer da fase atual
       phaseTimerInterval.current = setInterval(() => {
         // Atualizar o ref primeiro (sempre tem o valor mais atualizado)
-        currentPhaseTimerRef.current = (currentPhaseTimerRef.current || 0) + 10;
+        currentPhaseTimerRef.current = (currentPhaseTimerRef.current || 0) + TIMER_CONFIG.INTERVAL_MS;
         // Depois atualizar o state
         setCurrentPhaseTimer(currentPhaseTimerRef.current);
-      }, 10);
+      }, TIMER_CONFIG.INTERVAL_MS);
     } else {
       if (timerInterval.current) {
         clearInterval(timerInterval.current);
@@ -607,8 +436,8 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
    * Verifica se o jogador pegou a chave ao passar pela posição 'K'
    */
   useEffect(() => {
-    const keyRow = maze.findIndex(row => row.includes('K'));
-    const keyCol = keyRow >= 0 ? maze[keyRow].findIndex(cell => cell === 'K') : -1;
+    const keyRow = maze.findIndex(row => row.includes(MAP_SYMBOLS.KEY));
+    const keyCol = keyRow >= 0 ? maze[keyRow].findIndex(cell => cell === MAP_SYMBOLS.KEY) : -1;
     
     if (keyRow >= 0 && keyCol >= 0 && 
         playerPosition.row === keyRow && 
@@ -625,16 +454,16 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
    * - O cronômetro só para quando completa os 3 mapas
    */
   useEffect(() => {
-    const endRow = maze.findIndex(row => row.includes('E'));
-    const endCol = endRow >= 0 ? maze[endRow].findIndex(cell => cell === 'E') : -1;
+    const endRow = maze.findIndex(row => row.includes(MAP_SYMBOLS.END));
+    const endCol = endRow >= 0 ? maze[endRow].findIndex(cell => cell === MAP_SYMBOLS.END) : -1;
     
     if (endRow >= 0 && endCol >= 0 && 
         playerPosition.row === endRow && 
         playerPosition.col === endCol && 
         isTimerRunning &&
         !isProcessingPhaseCompletion.current) {
-      // Verificar se precisa de chave
-      const needsKey = difficulty === 'hard' || (difficulty === 'medium' && completedMaps === 2);
+      // Verificar se precisa de chave (apenas nível difícil)
+      const needsKey = difficulty === DIFFICULTY.HARD;
       if (needsKey && !hasKey) {
         return;
       }
@@ -687,6 +516,9 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
           setCompletedMaps(prev => prev + 1);
           setCommandQueue([]);
           setHasKey(false);
+          // Iniciar nova fase com Forward1.png (frame 1, direção down)
+          setPlayerFacing('down');
+          setAnimationFrame(1);
           // NÃO resetar gameStarted aqui - manter true para próxima fase iniciar o cronômetro automaticamente
           // setGameStarted(false); // Removido - manter o jogo iniciado entre fases
           
@@ -705,7 +537,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
             setTimeout(() => {
               isProcessingPhaseCompletion.current = false;
             }, 100);
-          }, 800); // Delay de 800ms para mostrar a tela de carregamento
+          }, TIMER_CONFIG.PHASE_TRANSITION_DELAY); // Delay para mostrar a tela de carregamento
         }, 20);
       } else {
         // Jogo completo! Capturar o tempo da última fase ANTES de parar o cronômetro
@@ -751,10 +583,11 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
   /**
    * Detecta quando um controle é conectado ou desconectado
    * Verifica se já existe um controle conectado ao carregar a página
+   * Também verifica periodicamente para casos onde o evento não dispara
    */
   useEffect(() => {
     const handleGamepadConnected = (e) => {
-      console.log('Gamepad conectado:', e.gamepad.id);
+      console.log('✅ Gamepad conectado:', e.gamepad.id);
       console.log('Índice do gamepad:', e.gamepad.index);
       console.log('Botões disponíveis:', e.gamepad.buttons.length);
       console.log('Eixos disponíveis:', e.gamepad.axes.length);
@@ -763,7 +596,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
     };
 
     const handleGamepadDisconnected = (e) => {
-      console.log('Gamepad desconectado:', e.gamepad.id);
+      console.log('❌ Gamepad desconectado:', e.gamepad.id);
       setGamepadConnected(false);
       setGamepadIndex(null);
       if (gamepadPollInterval.current) {
@@ -772,35 +605,51 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
       }
     };
 
+    // Função para verificar gamepads manualmente
+    const checkGamepads = () => {
+      const gamepads = navigator.getGamepads();
+      for (let i = 0; i < gamepads.length; i++) {
+        if (gamepads[i]) {
+          console.log(`🎮 Gamepad encontrado no índice ${i}:`, gamepads[i].id);
+          console.log('Botões:', gamepads[i].buttons.length, 'Eixos:', gamepads[i].axes.length);
+          if (!gamepadConnected || gamepadIndex !== i) {
+            setGamepadConnected(true);
+            setGamepadIndex(i);
+          }
+          return true;
+        }
+      }
+      return false;
+    };
+
     window.addEventListener('gamepadconnected', handleGamepadConnected);
     window.addEventListener('gamepaddisconnected', handleGamepadDisconnected);
 
-    // Verificar se já há um gamepad conectado
-    const gamepads = navigator.getGamepads();
-    console.log('Verificando gamepads existentes...');
-    for (let i = 0; i < gamepads.length; i++) {
-      if (gamepads[i]) {
-        console.log(`Gamepad encontrado no índice ${i}:`, gamepads[i].id);
-        console.log('Botões:', gamepads[i].buttons.length, 'Eixos:', gamepads[i].axes.length);
-        setGamepadConnected(true);
-        setGamepadIndex(i);
-        break;
-      }
-    }
+    // Verificar imediatamente se já há um gamepad conectado
+    console.log('🔍 Verificando gamepads existentes...');
+    checkGamepads();
     
-    // Log de debug se nenhum gamepad foi encontrado
-    if (!gamepadConnected) {
-      console.log('Nenhum gamepad detectado. Certifique-se de que o controle está conectado e reconhecido pelo Windows.');
-    }
+    // Verificar periodicamente (alguns navegadores não disparam o evento imediatamente)
+    const checkInterval = setInterval(() => {
+      if (!gamepadConnected) {
+        checkGamepads();
+      }
+    }, 1000);
+
+    // Limpar intervalo após 10 segundos (evitar verificação infinita)
+    setTimeout(() => {
+      clearInterval(checkInterval);
+    }, 10000);
 
     return () => {
       window.removeEventListener('gamepadconnected', handleGamepadConnected);
       window.removeEventListener('gamepaddisconnected', handleGamepadDisconnected);
+      clearInterval(checkInterval);
       if (gamepadPollInterval.current) {
         clearInterval(gamepadPollInterval.current);
       }
     };
-  }, []);
+  }, [gamepadConnected, gamepadIndex]);
 
   // Polling do gamepad
   // Só funciona quando o MazePage está ativo (não na tela de seleção)
@@ -830,13 +679,19 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
       const gamepad = navigator.getGamepads()[gamepadIndex];
       if (!gamepad) return;
 
-      // D-Pad (PS4: axes 6 e 7 ou botões 12-15)
+      // D-Pad e Analógicos (PS4: axes 0,1 para analógico esquerdo, 6,7 para D-Pad)
       // Botões do PS4: 0=X, 1=Círculo, 2=Quadrado, 3=Triângulo, 12-15=D-Pad
       const buttons = gamepad.buttons;
       const axes = gamepad.axes;
 
-      // D-Pad Up (botão 12 ou eixo 7 < -0.5)
-      if ((buttons[12] && buttons[12].pressed) || (axes[7] && axes[7] < -0.5)) {
+      // Threshold para considerar movimento do analógico (evitar drift)
+      const analogThreshold = GAMEPAD_CONFIG.ANALOG_THRESHOLD;
+
+      // Analógico esquerdo ou D-Pad Up (eixo 1 < -threshold ou eixo 7 < -threshold ou botão 12)
+      const analogUp = axes[1] && axes[1] < -analogThreshold;
+      const dpadUp = (buttons[12] && buttons[12].pressed) || (axes[7] && axes[7] < -analogThreshold);
+      
+      if (analogUp || dpadUp) {
         if (!lastButtonStates.current.dpadUp) {
           setSelectedBlockIndex(prev => {
             const newIndex = prev - 2;
@@ -848,8 +703,11 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
         lastButtonStates.current.dpadUp = false;
       }
 
-      // D-Pad Down (botão 13 ou eixo 7 > 0.5)
-      if ((buttons[13] && buttons[13].pressed) || (axes[7] && axes[7] > 0.5)) {
+      // Analógico esquerdo ou D-Pad Down (eixo 1 > threshold ou eixo 7 > threshold ou botão 13)
+      const analogDown = axes[1] && axes[1] > analogThreshold;
+      const dpadDown = (buttons[13] && buttons[13].pressed) || (axes[7] && axes[7] > analogThreshold);
+      
+      if (analogDown || dpadDown) {
         if (!lastButtonStates.current.dpadDown) {
           setSelectedBlockIndex(prev => {
             const newIndex = prev + 2;
@@ -861,8 +719,11 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
         lastButtonStates.current.dpadDown = false;
       }
 
-      // D-Pad Left (botão 14 ou eixo 6 < -0.5)
-      if ((buttons[14] && buttons[14].pressed) || (axes[6] && axes[6] < -0.5)) {
+      // Analógico esquerdo ou D-Pad Left (eixo 0 < -threshold ou eixo 6 < -threshold ou botão 14)
+      const analogLeft = axes[0] && axes[0] < -analogThreshold;
+      const dpadLeft = (buttons[14] && buttons[14].pressed) || (axes[6] && axes[6] < -analogThreshold);
+      
+      if (analogLeft || dpadLeft) {
         if (!lastButtonStates.current.dpadLeft) {
           setSelectedBlockIndex(prev => {
             const newIndex = prev - 1;
@@ -874,8 +735,11 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
         lastButtonStates.current.dpadLeft = false;
       }
 
-      // D-Pad Right (botão 15 ou eixo 6 > 0.5)
-      if ((buttons[15] && buttons[15].pressed) || (axes[6] && axes[6] > 0.5)) {
+      // Analógico esquerdo ou D-Pad Right (eixo 0 > threshold ou eixo 6 > threshold ou botão 15)
+      const analogRight = axes[0] && axes[0] > analogThreshold;
+      const dpadRight = (buttons[15] && buttons[15].pressed) || (axes[6] && axes[6] > analogThreshold);
+      
+      if (analogRight || dpadRight) {
         if (!lastButtonStates.current.dpadRight) {
           setSelectedBlockIndex(prev => {
             const newIndex = prev + 1;
@@ -981,7 +845,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
       }
     };
 
-    gamepadPollInterval.current = setInterval(pollGamepad, 50);
+    gamepadPollInterval.current = setInterval(pollGamepad, GAMEPAD_CONFIG.POLL_INTERVAL);
     
     return () => {
       if (gamepadPollInterval.current) {
@@ -1136,6 +1000,10 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
    */
   const executeCommands = async () => {
     if (commandQueueRef.current.length === 0 || isExecutingRef.current) return;
+    if (!maze || maze.length === 0 || !maze[0]) {
+      setIsExecuting(false);
+      return;
+    }
 
     setIsExecuting(true);
     let currentPos = { ...playerPosition };
@@ -1148,22 +1016,22 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
       let newPos = { ...currentPos };
 
       switch (cmd.id) {
-        case 'up':
+        case DIRECTIONS.UP:
           if (currentPos.row > 0) {
             newPos.row = currentPos.row - 1;
           }
           break;
-        case 'down':
+        case DIRECTIONS.DOWN:
           if (currentPos.row < maze.length - 1) {
             newPos.row = currentPos.row + 1;
           }
           break;
-        case 'left':
+        case DIRECTIONS.LEFT:
           if (currentPos.col > 0) {
             newPos.col = currentPos.col - 1;
           }
           break;
-        case 'right':
+        case DIRECTIONS.RIGHT:
           if (currentPos.col < maze[0].length - 1) {
             newPos.col = currentPos.col + 1;
           }
@@ -1172,14 +1040,19 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
           continue;
       }
 
-      // Verificar se há colisão com parede
-      const isWallCollision = newPos.row < 0 || 
-                              newPos.row >= maze.length ||
-                              newPos.col < 0 || 
-                              newPos.col >= maze[0].length ||
-                              (newPos.row >= 0 && newPos.row < maze.length &&
-                               newPos.col >= 0 && newPos.col < maze[0].length &&
-                               maze[newPos.row][newPos.col] === '#');
+      // Verificar se há colisão com parede, início (START) ou linha de chegada (END)
+      const isValidPosition = newPos.row >= 0 && 
+                               newPos.row < maze.length &&
+                               newPos.col >= 0 && 
+                               newPos.col < maze[0].length;
+      
+      const cellAtNewPos = isValidPosition ? maze[newPos.row][newPos.col] : null;
+      
+      // Bloquear movimento para START e END (células bloqueadas)
+      const isWallCollision = !isValidPosition ||
+                              cellAtNewPos === MAP_SYMBOLS.WALL ||
+                              cellAtNewPos === MAP_SYMBOLS.START ||
+                              cellAtNewPos === MAP_SYMBOLS.END;
 
       if (isWallCollision) {
         // Colisão detectada - parar execução e mostrar animação vermelha
@@ -1187,7 +1060,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
         setCollidedIds(prev => new Set(prev).add(cmdUniqueId));
         
         // Aguardar animação vermelha
-        await new Promise(resolve => setTimeout(resolve, 800));
+        await new Promise(resolve => setTimeout(resolve, ANIMATION_CONFIG.COLLISION_DURATION));
         
         // Limpar toda a fila de comandos
         setCommandQueue([]);
@@ -1227,17 +1100,83 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
       setIsWalking(true);
       
       // Verificar se pegou a chave
-      if (maze[currentPos.row][currentPos.col] === 'K' && !hasKey) {
+      if (maze[currentPos.row][currentPos.col] === MAP_SYMBOLS.KEY && !hasKey) {
         setHasKey(true);
       }
       
-      // Aguardar animação de movimento terminar (400ms da transição CSS)
-      await new Promise(resolve => setTimeout(resolve, 400));
+      // Verificar se chegou na linha de chegada (END) - parar execução IMEDIATAMENTE
+      // Não executar mais comandos mesmo que ainda existam na fila
+      if (maze[currentPos.row][currentPos.col] === MAP_SYMBOLS.END) {
+        // Animar frames: 1, 2, 1, 3 durante o movimento final
+        const animateFinalMovement = async () => {
+          // Frame 1
+          setAnimationFrame(1);
+          await new Promise(resolve => setTimeout(resolve, ANIMATION_CONFIG.MOVEMENT_DURATION / 4));
+          
+          // Frame 2
+          setAnimationFrame(2);
+          await new Promise(resolve => setTimeout(resolve, ANIMATION_CONFIG.MOVEMENT_DURATION / 4));
+          
+          // Frame 1 novamente
+          setAnimationFrame(1);
+          await new Promise(resolve => setTimeout(resolve, ANIMATION_CONFIG.MOVEMENT_DURATION / 4));
+          
+          // Frame 3
+          setAnimationFrame(3);
+          await new Promise(resolve => setTimeout(resolve, ANIMATION_CONFIG.MOVEMENT_DURATION / 4));
+        };
+        
+        // Executar animação final
+        await animateFinalMovement();
+        
+        // Limpar direção após animação e parar animação de andar
+        setMoveDirection(null);
+        setIsWalking(false);
+        // Voltar para frame 1 quando parar
+        setAnimationFrame(1);
+        
+        // Limpar toda a fila de comandos restantes
+        setCommandQueue([]);
+        
+        // Remover da lista de animações
+        setAnimatingIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(cmdUniqueId);
+          return newSet;
+        });
+        
+        // Parar execução IMEDIATAMENTE - o useEffect vai detectar que chegou no END e processar a conclusão da fase
+        setIsExecuting(false);
+        return;
+      }
+      
+      // Animar frames: 1, 2, 1, 3 durante o movimento
+      const animateMovement = async () => {
+        // Frame 1
+        setAnimationFrame(1);
+        await new Promise(resolve => setTimeout(resolve, ANIMATION_CONFIG.MOVEMENT_DURATION / 4));
+        
+        // Frame 2
+        setAnimationFrame(2);
+        await new Promise(resolve => setTimeout(resolve, ANIMATION_CONFIG.MOVEMENT_DURATION / 4));
+        
+        // Frame 1 novamente
+        setAnimationFrame(1);
+        await new Promise(resolve => setTimeout(resolve, ANIMATION_CONFIG.MOVEMENT_DURATION / 4));
+        
+        // Frame 3
+        setAnimationFrame(3);
+        await new Promise(resolve => setTimeout(resolve, ANIMATION_CONFIG.MOVEMENT_DURATION / 4));
+      };
+      
+      // Executar animação
+      await animateMovement();
       
       // Limpar direção após animação e parar animação de andar
       setMoveDirection(null);
-    setIsWalking(false);
       setIsWalking(false);
+      // Voltar para frame 1 quando parar
+      setAnimationFrame(1);
       
       // Remover o comando da fila após a animação usando o ID único
       setCommandQueue(prev => prev.filter(item => {
@@ -1253,13 +1192,15 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
       });
       
       // Aguardar um pouco antes do próximo movimento
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, ANIMATION_CONFIG.COMMAND_DELAY));
     }
 
     setIsExecuting(false);
     setAnimatingIds(new Set());
     setMoveDirection(null);
     setIsWalking(false);
+    // Voltar para frame 1 quando terminar execução
+    setAnimationFrame(1);
   };
 
   const resetPosition = () => {
@@ -1275,6 +1216,9 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
     setCompletedMaps(0);
     setCommandQueue([]);
     setIsExecuting(false);
+    // Iniciar com Forward1.png (frame 1, direção down)
+    setPlayerFacing('down');
+    setAnimationFrame(1);
     setTimer(0);
     setPhaseTimes([0, 0, 0]);
     setCurrentPhaseTimer(0);
@@ -1295,7 +1239,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
     // Remarcar como montado após um delay
     setTimeout(() => {
       isComponentMounted.current = true;
-    }, 500);
+    }, ANIMATION_CONFIG.COMMAND_DELAY * 2.5);
   };
 
   // ========== FUNÇÕES DO RANKING ==========
@@ -1330,7 +1274,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
       
       const newRanking = [...ranking, newEntry]
         .sort((a, b) => a.time - b.time)
-        .slice(0, 10);
+        .slice(0, RANKING_CONFIG.MAX_ENTRIES);
       
       setRanking(newRanking);
       const rankingKey = `mazeRanking-${difficulty}`;
@@ -1377,9 +1321,41 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
     resetPositionRef.current = resetPosition;
   });
 
+  /**
+   * Obtém o nome da imagem baseado na direção e frame
+   * @param {string} direction - Direção do personagem (down, up, left, right)
+   * @param {number} frame - Frame da animação (1, 2, ou 3)
+   * @returns {string} - Caminho da imagem
+   */
+  const getSpriteImage = (direction, frame) => {
+    const directionMap = {
+      'down': 'Forward',
+      'up': 'Back',
+      'left': 'Left',
+      'right': 'Right'
+    };
+    
+    const directionName = directionMap[direction] || 'Forward';
+    // Caminho relativo à pasta public (começa com /)
+    // Usar caminho direto - navegadores modernos lidam bem com espaços em URLs
+    return `/sprites/PacketSinglesColor (1)/${directionName}/${directionName}${frame}.png`;
+  };
+
   const renderMaze = () => {
+    // Verificar se o maze está inicializado
+    if (!maze || maze.length === 0) {
+      return (
+        <div className="maze-wrapper">
+          <div className="maze-loading">Carregando labirinto...</div>
+        </div>
+      );
+    }
+    
     // Calcular posição do personagem em pixels
-    const cellSize = 50; // Tamanho da célula em pixels
+    // Mapas 10x10 usam células menores para caber melhor na tela
+    const difficultyKey = difficulty === DIFFICULTY.EASY ? 'EASY' : 
+                          difficulty === DIFFICULTY.MEDIUM ? 'MEDIUM' : 'HARD';
+    const cellSize = MAP_CONFIG[difficultyKey].CELL_SIZE;
     const playerX = playerPosition.col * cellSize;
     const playerY = playerPosition.row * cellSize;
     
@@ -1389,18 +1365,22 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
           <div key={rowIndex} className="maze-row">
             {row.map((cell, colIndex) => {
               const isPlayer = playerPosition.row === rowIndex && playerPosition.col === colIndex;
-              const isEnd = cell === 'E';
-              const isKey = cell === 'K';
+              const isEnd = cell === MAP_SYMBOLS.END;
+              const isKey = cell === MAP_SYMBOLS.KEY;
               const isPreview = previewPath.has(`${rowIndex},${colIndex}`) && !isPlayer;
               
-              // Verificar se precisa de chave para completar
-              const needsKey = difficulty === 'hard' || (difficulty === 'medium' && completedMaps === 2);
+              // Verificar se precisa de chave para completar (apenas nível difícil)
+              const needsKey = difficulty === DIFFICULTY.HARD;
               const showLock = isEnd && needsKey && !hasKey;
               
               return (
                 <div
                   key={colIndex}
-                  className={`maze-cell ${cell === '#' ? 'wall' : 'path'} ${isPlayer ? 'player' : ''} ${isEnd ? 'end' : ''} ${isKey ? 'key' : ''} ${isPreview ? 'preview-path' : ''}`}
+                  className={`maze-cell ${cell === MAP_SYMBOLS.WALL ? 'wall' : 'path'} ${isPlayer ? 'player' : ''} ${isEnd ? 'end' : ''} ${isKey ? 'key' : ''} ${isPreview ? 'preview-path' : ''}`}
+                  style={{
+                    width: `${cellSize}px`,
+                    height: `${cellSize}px`
+                  }}
                 >
                   {showLock && !isPlayer && <div className="lock-char">🔒</div>}
                   {isEnd && !isPlayer && !showLock && <div className="end-char">🏁</div>}
@@ -1425,7 +1405,17 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
             pointerEvents: 'none'
           }}
         >
-          <div className="player-sprite"></div>
+          <img 
+            className="player-sprite"
+            src={getSpriteImage(playerFacing, isWalking ? animationFrame : 1)}
+            alt="Personagem"
+            onError={(e) => {
+              console.error('Erro ao carregar sprite:', getSpriteImage(playerFacing, isWalking ? animationFrame : 1));
+              // Fallback visual temporário
+              e.target.style.display = 'none';
+              e.target.parentElement.style.backgroundColor = '#3498db';
+            }}
+          />
         </div>
       </div>
     );
@@ -1439,9 +1429,9 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
         </div>
         <div className="header-info-container">
           <div className="difficulty-badge">
-            {difficulty === 'easy' && '⭐ Fácil'}
-            {difficulty === 'medium' && '⭐⭐ Médio'}
-            {difficulty === 'hard' && '⭐⭐⭐ Difícil'}
+            {difficulty === DIFFICULTY.EASY && DIFFICULTY_STARS[DIFFICULTY.EASY] + ' ' + DIFFICULTY_NAMES[DIFFICULTY.EASY]}
+            {difficulty === DIFFICULTY.MEDIUM && DIFFICULTY_STARS[DIFFICULTY.MEDIUM] + ' ' + DIFFICULTY_NAMES[DIFFICULTY.MEDIUM]}
+            {difficulty === DIFFICULTY.HARD && DIFFICULTY_STARS[DIFFICULTY.HARD] + ' ' + DIFFICULTY_NAMES[DIFFICULTY.HARD]}
           </div>
           <div className="timer-display">
             <span className="timer-label">Tempo:</span>
@@ -1452,10 +1442,10 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
           </div>
           <div className="progress-display">
             <span className="progress-label">Mapa {currentMapIndex + 1}/3 | Completados: {completedMaps}/3</span>
-            {(difficulty === 'hard' || (difficulty === 'medium' && completedMaps === 2)) && !hasKey && (
+            {difficulty === DIFFICULTY.HARD && !hasKey && (
               <span className="key-required">🔑 Pegue a chave para finalizar!</span>
             )}
-            {hasKey && (
+            {difficulty === DIFFICULTY.HARD && hasKey && (
               <span className="key-obtained">🔑 Chave obtida!</span>
             )}
           </div>
@@ -1527,7 +1517,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
                 onChange={(e) => setPlayerName(e.target.value)}
                 placeholder="Seu nome"
                 className="name-input"
-                maxLength={20}
+                maxLength={RANKING_CONFIG.MAX_NAME_LENGTH}
                 autoFocus
                 onKeyPress={(e) => {
                   if (e.key === 'Enter' && playerName.trim()) {
@@ -1551,7 +1541,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
         {/* Ranking Sidebar */}
         <div className="ranking-sidebar">
           <div className="ranking-header">
-            <h3>Top 10 - {difficulty === 'easy' ? 'Fácil' : difficulty === 'medium' ? 'Médio' : 'Difícil'}</h3>
+            <h3>Top 10 - {DIFFICULTY_NAMES[difficulty]}</h3>
             {ranking.length > 0 && (
               <button className="btn-clear-ranking" onClick={clearRanking} title="Limpar ranking">
                 🗑️
@@ -1581,17 +1571,17 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
         </div>
 
         <div className="maze-section">
-          {/* Tela de carregamento entre mapas */}
-          {isLoadingMap && (
+          {/* Tela de carregamento entre mapas ou inicial */}
+          {(isLoadingMap || isLoadingInitial) && (
             <div className="loading-map-overlay">
               <div className="loading-map-content">
                 <div className="loading-spinner"></div>
                 <h2>Carregando o mapa...</h2>
-                <p>Preparando o próximo desafio</p>
+                <p>{isLoadingInitial ? 'Preparando o jogo' : 'Preparando o próximo desafio'}</p>
               </div>
             </div>
           )}
-          <div className={`maze-area ${isLoadingMap ? 'hidden' : ''}`}>
+          <div className={`maze-area ${(isLoadingMap || isLoadingInitial) ? 'hidden' : ''}`}>
             {renderMaze()}
           </div>
           

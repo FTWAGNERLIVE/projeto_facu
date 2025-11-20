@@ -708,237 +708,28 @@
   z-index: 10;
   will-change: transform;
   transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1), top 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
 }
 
-/* Container do sprite do personagem */
+/* Container do sprite do personagem - usando imagens individuais */
 .player-sprite {
-  width: 120%;
-  height: 120%;
-  min-width: 40px;
-  min-height: 40px;
-  background-size: 300% 300% !important; /* 3 colunas x 3 linhas - AJUSTAR CONFORME O LAYOUT REAL */
-  background-repeat: no-repeat !important;
-  background-color: transparent !important;
+  width: 100%;
+  height: 100%;
+  min-width: 100%;
+  min-height: 100%;
+  object-fit: contain;
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
-  animation-timing-function: steps(4, end);
-  animation-iteration-count: infinite;
   position: relative;
   z-index: 1;
-  /* Forçar que não mostre emojis */
-  font-size: 0 !important;
-  line-height: 0 !important;
-  text-indent: -9999px !important;
-  overflow: hidden !important;
-  transform: scale(1.2) translateY(3px);
+  display: block;
+  pointer-events: none;
 }
 
-/* ========== SPRITESHEET LAYOUT ==========
- * 
- * Estrutura esperada do spritesheet:
- * - 4 colunas (direções): down, left, right, up
- * - 2 linhas (estados): idle (parado), walking (andando)
- * - Total: 8 frames (4 direções x 2 estados)
- * 
- * Layout do spritesheet (exemplo 64x64px por frame):
- * 
- *     [down-idle] [left-idle] [right-idle] [up-idle]
- *     [down-walk1][left-walk1][right-walk1][up-walk1]
- *     [down-walk2][left-walk2][right-walk2][up-walk2]
- *     [down-walk3][left-walk3][right-walk3][up-walk3]
- * 
- * Ou se usar apenas 2 linhas (idle + walking animado):
- *     [down-idle] [left-idle] [right-idle] [up-idle]
- *     [down-walk] [left-walk] [right-walk] [up-walk]
- * 
- * Para substituir: adicione a imagem em public/sprites/player.png
- * e descomente a linha background-image abaixo
- */
-
-/* Spritesheet ativo - desabilitar emojis completamente - REGRA MAIS ESPECÍFICA */
-.player-sprite::before,
-.player-sprite::after,
-.player-char .player-sprite::before,
-.player-char .player-sprite::after,
-.player-char.facing-down .player-sprite::before,
-.player-char.facing-down .player-sprite::after,
-.player-char.facing-left .player-sprite::before,
-.player-char.facing-left .player-sprite::after,
-.player-char.facing-right .player-sprite::before,
-.player-char.facing-right .player-sprite::after,
-.player-char.facing-up .player-sprite::before,
-.player-char.facing-up .player-sprite::after,
-.player-char.idle .player-sprite::before,
-.player-char.idle .player-sprite::after,
-.player-char.walking .player-sprite::before,
-.player-char.walking .player-sprite::after {
-  display: none !important;
-  content: '' !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  font-size: 0 !important;
-  line-height: 0 !important;
-  pointer-events: none !important;
-  position: absolute !important;
-  left: -9999px !important;
-  top: -9999px !important;
-}
-
-/* ========== IDLE (PARADO) - DOWN ========== */
-.player-char.facing-down.idle .player-sprite {
-  background-image: url('../assets/images/player.png') !important;
-  background-position: 0% 0% !important; /* Coluna 1 (0%), Linha 1 (0%) - Grid 3x3 */
-  animation: idle-down 1s steps(1) infinite;
-}
-
-.player-char.facing-down.idle .player-sprite::before {
-  display: none !important;
-  content: '' !important;
-}
-
-@keyframes idle-down {
-  0%, 100% { background-position: 0% 0% !important; }
-}
-
-/* ========== WALKING (ANDANDO) - DOWN ========== */
-.player-char.facing-down.walking .player-sprite {
-  background-image: url('../assets/images/player.png') !important;
-  background-position: 0% 33.333% !important; /* Coluna 1 (0%), Linha 2 (33.333%) - Grid 3x3 */
-  animation: walk-down 0.6s steps(1) infinite;
-}
-
-.player-char.facing-down.walking .player-sprite::before {
-  display: none !important;
-  content: '' !important;
-}
-
-@keyframes walk-down {
- 0%, 100% { background-position: 0% 33.333% !important; }
- 50% { background-position: 0% 33.333% !important; }
-}
-
-/* Animação de emoji removida - usando spritesheet */
-@keyframes walk-down-emoji {
-  /* Removido - usando spritesheet agora */
-}
-
-/* ========== IDLE (PARADO) - LEFT ========== */
-.player-char.facing-left.idle .player-sprite {
-  background-image: url('../assets/images/player.png') !important;
-  background-position: 33.333% 0% !important; /* Coluna 2 (33.333%), Linha 1 (0%) - Grid 3x3 */
-  animation: idle-left 1s steps(1) infinite;
-}
-
-.player-char.facing-left.idle .player-sprite::before {
-  display: none !important;
-  content: '' !important;
-}
-
-@keyframes idle-left {
-  0%, 100% { background-position: 33.333% 0% !important; }
-}
-
-/* ========== WALKING (ANDANDO) - LEFT ========== */
-.player-char.facing-left.walking .player-sprite {
-  background-image: url('../assets/images/player.png') !important;
-  background-position: 33.333% 33.333% !important; /* Coluna 2 (33.333%), Linha 2 (33.333%) - Grid 3x3 */
-  animation: walk-left 0.6s steps(1) infinite;
-}
-
-.player-char.facing-left.walking .player-sprite::before {
-  display: none !important;
-  content: '' !important;
-}
-
-@keyframes walk-left {
- 0%, 100% { background-position: 33.333% 33.333% !important; }
- 50% { background-position: 33.333% 33.333% !important; }
-}
-
-/* Animação de emoji removida - usando spritesheet */
-@keyframes walk-left-emoji {
-  /* Removido - usando spritesheet agora */
-}
-
-/* ========== IDLE (PARADO) - RIGHT ========== */
-.player-char.facing-right.idle .player-sprite {
-  background-image: url('../assets/images/player.png') !important;
-  background-position: 66.666% 0% !important; /* Coluna 3 (66.666%), Linha 1 (0%) - Grid 3x3 */
-  animation: idle-right 1s steps(1) infinite;
-}
-
-.player-char.facing-right.idle .player-sprite::before {
-  display: none !important;
-  content: '' !important;
-}
-
-@keyframes idle-right {
-  0%, 100% { background-position: 66.666% 0% !important; }
-}
-
-/* ========== WALKING (ANDANDO) - RIGHT ========== */
-.player-char.facing-right.walking .player-sprite {
-  background-image: url('../assets/images/player.png') !important;
-  background-position: 66.666% 33.333% !important; /* Coluna 3 (66.666%), Linha 2 (33.333%) - Grid 3x3 */
-  animation: walk-right 0.6s steps(1) infinite;
-}
-
-.player-char.facing-right.walking .player-sprite::before {
-  display: none !important;
-  content: '' !important;
-}
-
-@keyframes walk-right {
- 0%, 100% { background-position: 66.666% 33.333% !important; }
- 50% { background-position: 66.666% 33.333% !important; }
-}
-
-/* Animação de emoji removida - usando spritesheet */
-@keyframes walk-right-emoji {
-  /* Removido - usando spritesheet agora */
-}
-
-/* ========== IDLE (PARADO) - UP ========== */
-.player-char.facing-up.idle .player-sprite {
-  background-image: url('../assets/images/player.png') !important;
-  background-position: 33.333% 66.666% !important; /* Coluna 2 (33.333%), Linha 3 (66.666%) - Grid 3x3 - CENTRO INFERIOR */
-  animation: idle-up 1s steps(1) infinite;
-}
-
-.player-char.facing-up.idle .player-sprite::before {
-  display: none !important;
-  content: '' !important;
-}
-
-@keyframes idle-up {
-  0%, 100% { background-position: 33.333% 66.666% !important; }
-}
-
-/* ========== WALKING (ANDANDO) - UP ========== */
-.player-char.facing-up.walking .player-sprite {
-  background-image: url('../assets/images/player.png') !important;
-  background-position: 33.333% 66.666% !important; /* Coluna 2 (33.333%), Linha 3 (66.666%) - Grid 3x3 - CENTRO INFERIOR */
-  animation: walk-up 0.6s steps(1) infinite;
-}
-
-.player-char.facing-up.walking .player-sprite::before {
-  display: none !important;
-  content: '' !important;
-}
-
-@keyframes walk-up {
- 0%, 100% { background-position: 33.333% 66.666% !important; }
- 50% { background-position: 33.333% 66.666% !important; }
-}
-
-/* Animação de emoji removida - usando spritesheet */
-@keyframes walk-up-emoji {
-  /* Removido - usando spritesheet agora */
-}
+/* Sistema de animação usando imagens individuais */
+/* As imagens são definidas dinamicamente via JavaScript */
 
 /* Animações de deslizamento - apenas efeito visual durante o movimento */
 .player-char.slide-up {
