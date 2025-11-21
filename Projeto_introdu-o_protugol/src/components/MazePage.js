@@ -1040,7 +1040,8 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
           continue;
       }
 
-      // Verificar se há colisão com parede, início (START) ou linha de chegada (END)
+      // Verificar se há colisão com parede ou início (START)
+      // NOTA: END não é bloqueado - o personagem pode entrar na linha de chegada
       const isValidPosition = newPos.row >= 0 && 
                                newPos.row < maze.length &&
                                newPos.col >= 0 && 
@@ -1048,11 +1049,11 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
       
       const cellAtNewPos = isValidPosition ? maze[newPos.row][newPos.col] : null;
       
-      // Bloquear movimento para START e END (células bloqueadas)
+      // Bloquear movimento para START (não pode voltar ao início)
+      // END é permitido - quando chegar lá, a execução será parada automaticamente
       const isWallCollision = !isValidPosition ||
                               cellAtNewPos === MAP_SYMBOLS.WALL ||
-                              cellAtNewPos === MAP_SYMBOLS.START ||
-                              cellAtNewPos === MAP_SYMBOLS.END;
+                              cellAtNewPos === MAP_SYMBOLS.START;
 
       if (isWallCollision) {
         // Colisão detectada - parar execução e mostrar animação vermelha
@@ -1519,8 +1520,9 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
                 className="name-input"
                 maxLength={RANKING_CONFIG.MAX_NAME_LENGTH}
                 autoFocus
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === 'Enter' && playerName.trim()) {
+                    e.preventDefault();
                     handleSubmitScore();
                   }
                 }}
