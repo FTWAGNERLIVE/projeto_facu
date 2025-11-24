@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import rankingSync from '../utils/rankingSync';
 import './QuizPage.css';
 
 const QuizPage = () => {
@@ -83,12 +84,39 @@ const QuizPage = () => {
     }
   ];
 
-  // Carregar ranking do localStorage
-  useEffect(() => {
-    const savedRanking = localStorage.getItem('quizRanking');
-    if (savedRanking) {
-      setRanking(JSON.parse(savedRanking));
+  // Função para limpar cache
+  const clearCache = async () => {
+    if (window.confirm('Tem certeza que deseja limpar todo o cache? Isso apagará todos os rankings salvos.')) {
+      // Limpar todos os rankings
+      await rankingSync.clearRanking('quiz');
+      await rankingSync.clearRanking('maze-easy');
+      await rankingSync.clearRanking('maze-medium');
+      await rankingSync.clearRanking('maze-hard');
+      
+      // Recarregar o ranking atual
+      const loadedRanking = await rankingSync.getRanking('quiz');
+      setRanking(loadedRanking);
+      
+      alert('Cache limpo com sucesso!');
     }
+  };
+
+  // Carregar ranking e iniciar sincronização
+  useEffect(() => {
+    const loadRanking = async () => {
+      const loadedRanking = await rankingSync.getRanking('quiz');
+      setRanking(loadedRanking);
+    };
+    
+    loadRanking();
+    
+    // Iniciar sincronização automática
+    rankingSync.startAutoSync(5000);
+    
+    // Limpar ao desmontar
+    return () => {
+      rankingSync.stopAutoSync();
+    };
   }, []);
 
   const handleAnswer = (questionId, answerIndex) => {
@@ -138,8 +166,10 @@ const QuizPage = () => {
         .sort((a, b) => b.percentage - a.percentage)
         .slice(0, 10); // Top 10
       
-      setRanking(newRanking);
-      localStorage.setItem('quizRanking', JSON.stringify(newRanking));
+      // Salvar usando sincronização
+      rankingSync.saveRanking('quiz', newRanking).then(updatedRanking => {
+        setRanking(updatedRanking);
+      });
       
       // Salvar no arquivo TXT
       saveToFile(newEntry);
@@ -452,6 +482,15 @@ Menor Pontuação: ${ranking.length > 0 ? Math.min(...ranking.map(entry => entry
           </div>
         </div>
       </div>
+      
+      {/* Botão de limpar cache - canto inferior direito */}
+      <button 
+        className="btn-clear-cache-fixed" 
+        onClick={clearCache}
+        title="Limpar Cache (apaga todos os rankings)"
+      >
+        🗑️
+      </button>
     </div>
   );
 };

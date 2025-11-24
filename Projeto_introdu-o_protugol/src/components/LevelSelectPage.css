@@ -1,50 +1,67 @@
-/**
- * LevelSelectPage.css - Estilos da Página de Seleção de Níveis
- */
+﻿/* =============================================== */
+/*  Cyberpunk 2077 Theme ÔÇö Level Select Page        */
+/* =============================================== */
 
+/* Fundo principal da p├ígina */
 .level-select-page {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 100%;
+  height: 100%;
+  min-height: calc(100vh - 50px);
+  background: linear-gradient(135deg, rgb(0, 0, 4)ary) 0%, var(--bg-secondary) 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  color: white;
+  color: var(--text-primary);
+  overflow: auto;
+  box-sizing: border-box;
 }
 
 .level-select-container {
-  max-width: 1200px;
+  max-width: 1400px;
   width: 100%;
   text-align: center;
   overflow: visible;
   position: relative;
 }
 
+/* ===================== */
+/* T├ìTULOS 2077          */
+/* ===================== */
 .level-select-container h1 {
   font-size: 3rem;
   margin-bottom: 10px;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  color: var(--neon-yellow);
+  text-shadow: var(--glow-yellow);
+  letter-spacing: 2px;
 }
 
 .level-select-subtitle {
   font-size: 1.2rem;
-  opacity: 0.9;
+  opacity: 0.8;
   margin-bottom: 40px;
+  color: var(--text-secondary);
 }
 
+/* ===================== */
+/* GRID DE N├ìVEIS        */
+/* ===================== */
 .levels-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 30px;
-  margin-top: 40px;
+  gap: 35px;
+  margin: 40px;
 }
 
+/* ===================== */
+/* CARDS CYBERPUNK       */
+/* ===================== */
 .level-card {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
+  background: var(--bg-secondary);
+  border-radius: 16px;
   padding: 40px 30px;
-  backdrop-filter: blur(10px);
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 2px solid var(--neon-blue);
+  box-shadow: 0 0 12px var(--neon-blue-transp);
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
@@ -54,59 +71,60 @@
 
 .level-card:hover {
   transform: translateY(-10px);
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 18px var(--neon-blue), 0 0 30px var(--neon-blue-transp);
+  border-color: var(--neon-blue);
+  background: var(--bg-primary);
 }
 
+/* SELECIONADO */
 .level-card.selected {
-  background: rgba(76, 175, 80, 0.3);
-  border-color: #4CAF50;
-  border-width: 3px;
-  box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
-  transform: translateY(-5px);
+  border-color: var(--neon-yellow);
+  background: var(--neon-blue-transp);
+  box-shadow: 0 0 22px var(--neon-yellow), 0 0 40px var(--neon-yellow);
+  transform: translateY(-6px);
 }
 
+/* Indicador de sele├º├úo */
 .selection-indicator {
   margin-top: 15px;
   padding: 8px 15px;
-  background: rgba(76, 175, 80, 0.8);
+  background: var(--neon-yellow);
   border-radius: 10px;
   font-weight: bold;
-  color: white;
+  color: #000;
   font-size: 0.9rem;
-  animation: pulse-indicator 1.5s ease-in-out infinite;
+  box-shadow: var(--glow-yellow);
+  animation: pulse-indicator 1.3s ease-in-out infinite;
 }
 
+/* Pulsar futurista */
 @keyframes pulse-indicator {
   0%, 100% {
-    opacity: 1;
     transform: scale(1);
+    opacity: 1;
   }
   50% {
+    transform: scale(1.07);
     opacity: 0.8;
-    transform: scale(1.05);
   }
 }
 
-.controls-hint {
-  margin-top: 30px;
-  font-size: 0.9rem;
-  opacity: 0.8;
-  font-style: italic;
-}
-
+/* ===================== */
+/* ├ìCONE DO CARD         */
+/* ===================== */
 .level-icon {
   font-size: 4rem;
   margin-bottom: 20px;
-  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+  filter: drop-shadow(0 0 10px var(--neon-blue));
+  color: var(--neon-blue);
 }
 
+/* T├¡tulo do card */
 .level-card h2 {
   font-size: 2rem;
   margin-bottom: 15px;
-  color: #ffd700;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+  color: var(--neon-yellow);
+  text-shadow: var(--glow-yellow);
 }
 
 .level-description {
@@ -114,8 +132,10 @@
   margin-bottom: 20px;
   opacity: 0.9;
   line-height: 1.6;
+  color: var(--text-secondary);
 }
 
+/* Lista de features */
 .level-features {
   display: flex;
   flex-direction: column;
@@ -125,329 +145,79 @@
 }
 
 .level-features span {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 246, 255, 0.08);
   padding: 8px 15px;
   border-radius: 8px;
   font-size: 0.9rem;
   text-align: left;
+  border-left: 3px solid var(--neon-blue);
+  color: var(--text-primary);
 }
 
-/* ========== BOTÕES PWA ========== */
-.pwa-actions {
-  display: flex !important;
-  gap: 15px;
-  justify-content: center;
+/* ============================= */
+/* HINT                          */
+/* ============================= */
+.controls-hint {
   margin-top: 30px;
-  margin-bottom: 30px;
-  flex-wrap: wrap;
-  position: relative;
-  z-index: 10;
-  visibility: visible !important;
-  opacity: 1 !important;
+  font-size: 0.9rem;
+  opacity: 0.6;
+  font-style: italic;
 }
 
+/* ============================= */
+/* PWA BUTTONS ÔÇö NEON            */
+/* ============================= */
 .install-pwa-btn,
 .qr-code-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-  border: 2px solid rgba(255, 255, 255, 0.3) !important;
-  color: white !important;
+  background: var(--bg-secondary) !important;
+  border: 2px solid var(--neon-blue) !important;
+  color: var(--neon-blue) !important;
   padding: 12px 24px !important;
   border-radius: 12px !important;
   font-size: 1rem !important;
   font-weight: bold !important;
   cursor: pointer !important;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  position: relative;
-  z-index: 10;
+  transition: 0.3s ease;
+  box-shadow: 0 0 10px var(--neon-blue-transp) !important;
 }
 
 .install-pwa-btn:hover,
 .qr-code-btn:hover {
+  background: var(--neon-blue-transp) !important;
+  box-shadow: 0 0 16px var(--neon-blue), 0 0 22px var(--neon-blue) !important;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-  border-color: rgba(255, 255, 255, 0.5);
-  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
 }
 
-.install-pwa-btn:active,
-.qr-code-btn:active {
-  transform: translateY(0);
-}
-
-/* ========== MODAL QR CODE ========== */
+/* ============================= */
+/* MODAL CYBERPUNK               */
+/* ============================= */
 .qr-code-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(5px);
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
 }
 
 .qr-code-content {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 20px;
-  padding: 40px;
-  text-align: center;
-  color: white;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-  max-width: 400px;
-  width: 90%;
-  animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(50px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  background: var(--bg-secondary);
+  border: 2px solid var(--neon-blue);
+  box-shadow: 0 0 20px var(--neon-blue-transp);
+  color: var(--text-primary);
 }
 
 .qr-code-content h3 {
-  margin-bottom: 20px;
-  font-size: 1.5rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  color: var(--neon-yellow);
+  text-shadow: var(--glow-yellow);
 }
 
+/* Conte├║do em volta do QR */
 .qr-code-wrapper {
-  background: white;
+  background: #fff;
   padding: 20px;
   border-radius: 15px;
-  display: inline-block;
-  margin: 20px 0;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
-.qr-code-url {
-  margin-top: 20px;
-  font-size: 0.9rem;
-  word-break: break-all;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 10px;
-  border-radius: 8px;
-  opacity: 0.9;
-}
-
-.qr-code-hint {
-  margin-top: 15px;
-  font-size: 0.9rem;
-  opacity: 0.8;
-  font-style: italic;
-}
-
-.qr-code-instructions {
-  margin: 20px 0;
-  text-align: left;
-}
-
-.qr-code-warning {
-  font-size: 1rem;
-  font-weight: bold;
-  margin-bottom: 15px;
-  color: #ffd700;
-}
-
-.qr-code-steps {
-  margin: 15px 0;
-  padding-left: 20px;
-  line-height: 1.8;
-}
-
-.qr-code-steps li {
-  margin-bottom: 10px;
-}
-
-.qr-code-steps strong {
-  color: #ffd700;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.qr-code-tip {
-  margin-top: 15px;
-  padding: 15px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  font-size: 0.9rem;
-  line-height: 1.6;
-}
-
-.qr-code-tip code {
-  background: rgba(0, 0, 0, 0.3);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
-}
-
-.qr-code-loading {
-  padding: 40px 20px;
-  text-align: center;
-}
-
-.qr-code-loading p {
-  font-size: 1.1rem;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
-}
-
-.qr-code-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  justify-content: center;
-  align-items: center;
-  margin-top: 15px;
-}
-
-.qr-code-actions > button {
-  width: 100%;
-  max-width: 300px;
-}
-
-.qr-refresh-btn,
-.qr-manual-ip-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-size: 0.9rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.qr-refresh-btn:hover,
-.qr-manual-ip-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.5);
-  transform: translateY(-2px);
-}
-
-.qr-manual-ip-section {
-  margin-top: 20px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-}
-
-.qr-ip-input {
-  width: 100%;
-  padding: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  font-size: 1rem;
-  text-align: center;
-  margin-bottom: 15px;
-}
-
-.qr-ip-input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.qr-ip-input:focus {
-  outline: none;
-  border-color: rgba(255, 255, 255, 0.6);
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.qr-ip-buttons {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-}
-
-.qr-apply-btn,
-.qr-cancel-btn {
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-}
-
-.qr-apply-btn {
-  background: rgba(76, 175, 80, 0.8);
-  color: white;
-  border-color: #4CAF50;
-}
-
-.qr-apply-btn:hover:not(:disabled) {
-  background: rgba(76, 175, 80, 1);
-  transform: translateY(-2px);
-}
-
-.qr-apply-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.qr-cancel-btn {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
-.qr-cancel-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
-}
-
-.qr-close-btn {
-  margin-top: 20px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  padding: 10px 30px;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.qr-close-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.5);
-  transform: translateY(-2px);
-}
-
+/* ------------------------------ */
+/* Responsividade                 */
+/* ------------------------------ */
 @media (max-width: 768px) {
   .level-select-container h1 {
     font-size: 2rem;
@@ -461,28 +231,4 @@
   .level-card {
     padding: 30px 20px;
   }
-
-  .pwa-actions {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .install-pwa-btn,
-  .qr-code-btn {
-    width: 100%;
-    max-width: 300px;
-  }
-
-  .qr-code-content {
-    padding: 30px 20px;
-  }
-
-  .qr-code-wrapper {
-    padding: 15px;
-  }
-
-  .qr-code-content h3 {
-    font-size: 1.2rem;
-  }
 }
-

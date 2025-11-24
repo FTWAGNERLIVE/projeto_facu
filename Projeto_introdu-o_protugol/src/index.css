@@ -1,3 +1,43 @@
+/* src/index.css */
+
+/* =================================== */
+/* 1. DEFINIÇÃO DA PALETA "2077"       */
+/* =================================== */
+:root {
+  /* Fundos (Backgrounds) */
+  --bg-primary: #0a0a1f;
+  --bg-secondary: #141430;
+  --bg-tertiary: #000000;
+
+  /* Textos */
+  --text-primary: #E0E0FF;
+  --text-secondary: #8080A0;
+
+  /* Cores NEON Cyberpunk */
+  --neon-green: #F8F32B;
+  --neon-yellow: #f8f52b88;
+  --neon-green-transp: rgba(248, 243, 43, 0.15);
+
+  --neon-blue: #00f7ffb3;
+  --neon-blue-transp: rgba(0, 246, 255, 0.15);
+
+  --neon-pink: #f000b8aa;
+  --neon-pink-transp: rgba(240, 0, 185, 0.15);
+
+  --neon-red: #FF0000;
+
+  /* Glow Effects */
+  --glow-green: 0 0 8px var(--neon-green), 0 0 12px var(--neon-green);
+  --glow-yellow: 0 0 5px var(--neon-yellow), 0 0 12px var(--neon-yellow);
+  --glow-blue: 0 0 8px var(--neon-blue), 0 0 12px var(--neon-blue);
+  --glow-pink: 0 0 8px var(--neon-pink), 0 0 12px var(--neon-pink);
+  --glow-red: 0 0 8px var(--neon-red), 0 0 12px var(--neon-red);
+}
+
+/* =================================== */
+/* 2. APLICAÇÃO GLOBAL                 */
+/* =================================== */
+
 * {
   margin: 0;
   padding: 0;
@@ -6,11 +46,148 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  margin: 0;
-  padding: 0;
+  background: linear-gradient(145deg, #0a0a1f 0%, #000000 60%, #0d0d1b 100%);
+  color: var(--text-primary);
+  overflow-x: hidden;
 }
 
+/* Área principal */
 #root {
   width: 100%;
   min-height: 100vh;
+}
+
+/* =================================== */
+/* 3. EFEITOS VISUAIS FUTURISTAS       */
+/* =================================== */
+
+/* Glow leve em elementos de destaque */
+.cyber-glow-blue {
+  color: var(--neon-blue);
+  text-shadow: var(--glow-blue);
+}
+
+.cyber-glow-yellow {
+  color: var(--neon-yellow);
+  text-shadow: var(--glow-yellow);
+}
+
+.cyber-glow-pink {
+  color: var(--neon-pink);
+  text-shadow: var(--glow-pink);
+}
+
+/* =================================== */
+/* 4. BOTÕES "NEON 2077"               */
+/* =================================== */
+
+button {
+  background: transparent;
+  border: 2px solid var(--neon-blue);
+  color: var(--neon-blue);
+  padding: 10px 18px;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 4px;
+
+  box-shadow: 0 0 8px var(--neon-blue);
+  transition: 0.2s ease-in-out;
+}
+
+button:hover {
+  background: var(--neon-blue-transp);
+  box-shadow: 0 0 12px var(--neon-blue), 0 0 20px var(--neon-blue);
+  transform: translateY(-2px);
+}
+
+/* Botão rosa */
+button.pink {
+  border-color: var(--neon-pink);
+  color: var(--neon-pink);
+  box-shadow: 0 0 8px var(--neon-pink);
+}
+
+button.pink:hover {
+  background: var(--neon-pink-transp);
+  box-shadow: 0 0 12px var(--neon-pink), 0 0 22px var(--neon-pink);
+}
+
+/* =================================== */
+/* 5. INPUTS / SELECTS FUTURISTAS      */
+/* =================================== */
+input, select {
+  background: var(--bg-secondary);
+  border: 1px solid var(--neon-blue);
+  color: var(--text-primary);
+  padding: 8px;
+  border-radius: 4px;
+  outline: none;
+
+  box-shadow: 0 0 6px var(--neon-blue-transp);
+}
+
+input:focus,
+select:focus {
+  border-color: var(--neon-pink);
+  box-shadow: 0 0 10px var(--neon-pink);
+}
+
+/* =================================== */
+/* 6. SCROLLBAR ESTILO 2077            */
+/* =================================== */
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--neon-blue);
+  box-shadow: inset 0 0 8px var(--neon-blue);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--neon-pink);
+  box-shadow: inset 0 0 12px var(--neon-pink);
+}
+
+/* =================================== */
+/* 7. EFEITO DE SELEÇÃO DE TEXTO       */
+/* =================================== */
+
+::selection {
+  background: var(--neon-yellow);
+  color: #000;
+}
+
+/* =================================== */
+/* 8. CARDS FUTURISTAS                 */
+/* =================================== */
+
+.cyber-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--neon-blue);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 12px var(--neon-blue-transp);
+  transition: 0.3s ease-in-out;
+}
+
+.cyber-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0 14px var(--neon-blue), 0 0 30px var(--neon-blue);
+}
+
+/* =================================== */
+/* 9. CABEÇALHOS / TÍTULOS NEON       */
+/* =================================== */
+
+h1, h2, h3 {
+  font-weight: bold;
+  text-shadow: var(--glow-yellow);
+  color: var(--neon-yellow);
 }

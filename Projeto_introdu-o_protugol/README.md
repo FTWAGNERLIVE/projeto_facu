@@ -64,22 +64,40 @@ Para instruções detalhadas, solução de problemas e configurações avançada
 ```
 Projeto_introdu-o_protugol/
 ├── docs/                    # Documentação e guias
+│   ├── data/                # Arquivos de dados e exemplos
+│   │   ├── EXEMPLO_REGISTRO.txt
+│   │   ├── GABARITO_QUIZ_PORTUGOL.txt
+│   │   └── REGISTRO_QUIZ.txt
 │   ├── GUIA_INSTALACAO.md
 │   ├── COMANDOS_RAPIDOS.md
 │   ├── CONFIGURAR_PS4.md
+│   ├── SPRITESHEET_GUIDE.md
 │   └── SOLUCAO_ERRO_*.md
+├── scripts/                 # Scripts utilitários
+│   └── generate-icons.js    # Gerador de ícones PWA
 ├── src/
-│   ├── components/
+│   ├── components/          # Componentes React
 │   │   ├── QuizPage.js      # Componente do quiz
 │   │   ├── MazePage.js      # Componente do labirinto
 │   │   ├── LevelSelectPage.js # Seleção de níveis
+│   │   ├── LoadingScreen.js # Tela de carregamento
 │   │   └── *.css            # Estilos dos componentes
-│   ├── App.js               # Componente principal
-│   ├── App.css              # Estilos globais
-│   └── index.js             # Ponto de entrada
-├── public/                  # Arquivos públicos
-├── package.json             # Dependências e scripts
-└── README.md                # Este arquivo
+│   ├── constants/          # Constantes do jogo
+│   │   └── gameConstants.js
+│   ├── data/               # Dados do jogo
+│   │   └── mazeData.js
+│   ├── assets/             # Recursos estáticos
+│   │   └── images/
+│   ├── App.js              # Componente principal
+│   ├── App.css             # Estilos globais
+│   └── index.js            # Ponto de entrada
+├── public/                 # Arquivos públicos
+│   ├── sprites/            # Sprites do jogo
+│   │   └── player-sprites/ # Sprites do jogador
+│   ├── index.html
+│   └── manifest.json
+├── package.json            # Dependências e scripts
+└── README.md               # Este arquivo
 ```
 
 ## Recursos do Quiz

@@ -66,7 +66,7 @@ function createMinimalPNG(size) {
 }
 
 // Gerar os ícones
-const publicDir = path.join(__dirname, 'public');
+const publicDir = path.join(__dirname, '..', 'public');
 
 console.log('Gerando ícones PWA...');
 

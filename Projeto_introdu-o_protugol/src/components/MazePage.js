@@ -28,6 +28,8 @@ import {
   DIRECTIONS
 } from '../constants/gameConstants';
 import { MAZES_8X8, MAZES_10X10 } from '../data/mazeData';
+import audioManager from '../utils/audioManager';
+import rankingSync from '../utils/rankingSync';
 import './MazePage.css';
 
 const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
@@ -264,15 +266,23 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
     return bestPosition;
   };
 
-  // Carregar ranking do localStorage baseado na dificuldade
+  // Carregar ranking e iniciar sincronização
   useEffect(() => {
-    const rankingKey = `mazeRanking-${difficulty}`;
-    const savedRanking = localStorage.getItem(rankingKey);
-    if (savedRanking) {
-      setRanking(JSON.parse(savedRanking));
-    } else {
-      setRanking([]);
-    }
+    const loadRanking = async () => {
+      const rankingType = `maze-${difficulty}`;
+      const loadedRanking = await rankingSync.getRanking(rankingType);
+      setRanking(loadedRanking);
+    };
+    
+    loadRanking();
+    
+    // Iniciar sincronização automática
+    rankingSync.startAutoSync(5000);
+    
+    // Limpar ao desmontar
+    return () => {
+      rankingSync.stopAutoSync();
+    };
   }, [difficulty]);
 
   // Resetar carregamento inicial quando a dificuldade mudar
@@ -315,12 +325,22 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
         isComponentMounted.current = true;
       }, ANIMATION_CONFIG.COMMAND_DELAY * 2.5);
       
+      // Iniciar música de fundo (se disponível)
+      audioManager.playMusic('backgroundMusic');
+      
       // Esconder o carregamento inicial após um delay
       setTimeout(() => {
         setIsLoadingInitial(false);
       }, TIMER_CONFIG.INITIAL_LOADING_DELAY);
     }
   }, [selectedMaps.length, difficulty]);
+  
+  // Limpar música quando o componente for desmontado
+  useEffect(() => {
+    return () => {
+      audioManager.stopMusic();
+    };
+  }, []);
 
   // Calcular preview do caminho (nível fácil)
   useEffect(() => {
@@ -981,6 +1001,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
 
   const removeCommand = () => {
     // Remove sempre o último bloco adicionado (último da fila)
+    audioManager.playSound('buttonClick', null, 200);
     setCommandQueue(prev => {
       if (prev.length === 0) return prev;
       return prev.slice(0, -1);
@@ -988,6 +1009,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
   };
 
   const clearQueue = () => {
+    audioManager.playSound('buttonClick', null, 200);
     setCommandQueue([]);
   };
 
@@ -1005,6 +1027,8 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
       return;
     }
 
+    // Tocar som de botão ao iniciar execução
+    audioManager.playSound('buttonClick', null, 200);
     setIsExecuting(true);
     let currentPos = { ...playerPosition };
     const queue = [...commandQueueRef.current];
@@ -1060,6 +1084,12 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
         // Adicionar animação vermelha no bloco que colidiu
         setCollidedIds(prev => new Set(prev).add(cmdUniqueId));
         
+        // Parar som de movimento
+        audioManager.stopSound('move');
+        
+        // Tocar som de colisão
+        audioManager.playSound('collision');
+        
         // Aguardar animação vermelha
         await new Promise(resolve => setTimeout(resolve, ANIMATION_CONFIG.COLLISION_DURATION));
         
@@ -1070,6 +1100,8 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
         setCollidedIds(new Set());
         setIsExecuting(false);
         setAnimatingIds(new Set());
+        setMoveDirection(null);
+        setIsWalking(false);
         return;
       }
 
@@ -1100,14 +1132,22 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
       setMoveDirection(direction);
       setIsWalking(true);
       
+      // Tocar som de movimento
+      audioManager.playSound('move');
+      
       // Verificar se pegou a chave
       if (maze[currentPos.row][currentPos.col] === MAP_SYMBOLS.KEY && !hasKey) {
         setHasKey(true);
+        // Tocar som de coleta de chave por 1 segundo
+        audioManager.playSound('keyCollect', null, 1000);
       }
       
       // Verificar se chegou na linha de chegada (END) - parar execução IMEDIATAMENTE
       // Não executar mais comandos mesmo que ainda existam na fila
       if (maze[currentPos.row][currentPos.col] === MAP_SYMBOLS.END) {
+        // Tocar som de chegada no destino
+        audioManager.playSound('goalReach');
+        
         // Animar frames: 1, 2, 1, 3 durante o movimento final
         const animateFinalMovement = async () => {
           // Frame 1
@@ -1135,6 +1175,9 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
         setIsWalking(false);
         // Voltar para frame 1 quando parar
         setAnimationFrame(1);
+        
+        // Parar som de movimento quando parar de andar
+        audioManager.stopSound('move');
         
         // Limpar toda a fila de comandos restantes
         setCommandQueue([]);
@@ -1179,6 +1222,9 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
       // Voltar para frame 1 quando parar
       setAnimationFrame(1);
       
+      // Parar som de movimento quando parar de andar
+      audioManager.stopSound('move');
+      
       // Remover o comando da fila após a animação usando o ID único
       setCommandQueue(prev => prev.filter(item => {
         const itemUniqueId = item.uniqueId;
@@ -1202,9 +1248,16 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
     setIsWalking(false);
     // Voltar para frame 1 quando terminar execução
     setAnimationFrame(1);
+    
+    // Parar som de movimento quando terminar execução
+    audioManager.stopSound('move');
   };
 
   const resetPosition = () => {
+    // Parar som de movimento se estiver tocando
+    audioManager.stopSound('move');
+    // Tocar som de botão
+    audioManager.playSound('buttonClick', null, 200);
     // Selecionar novos mapas e voltar para o primeiro
     const selected = selectNewMaps();
     setSelectedMaps(selected);
@@ -1277,9 +1330,11 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
         .sort((a, b) => a.time - b.time)
         .slice(0, RANKING_CONFIG.MAX_ENTRIES);
       
-      setRanking(newRanking);
-      const rankingKey = `mazeRanking-${difficulty}`;
-      localStorage.setItem(rankingKey, JSON.stringify(newRanking));
+      // Salvar usando sincronização
+      const rankingType = `maze-${difficulty}`;
+      rankingSync.saveRanking(rankingType, newRanking).then(updatedRanking => {
+        setRanking(updatedRanking);
+      });
       
       // Fechar o modal primeiro
       setShowCompletionModal(false);
@@ -1307,13 +1362,44 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
 
   /**
    * Limpa o ranking (com confirmação)
-   * Remove do localStorage e do estado
+   * Remove do servidor e localStorage
    */
   const clearRanking = () => {
     if (window.confirm('Tem certeza que deseja limpar o ranking?')) {
-      setRanking([]);
+      const rankingType = `maze-${difficulty}`;
+      rankingSync.clearRanking(rankingType).then(() => {
+        setRanking([]);
+      });
+    }
+  };
+
+  /**
+   * Limpa todo o cache (localStorage)
+   * Remove todos os dados salvos do jogo
+   */
+  const clearCache = () => {
+    if (window.confirm('Tem certeza que deseja limpar todo o cache? Isso apagará todos os rankings salvos.')) {
+      // Limpar todos os rankings de todas as dificuldades
+      localStorage.removeItem('mazeRanking-easy');
+      localStorage.removeItem('mazeRanking-medium');
+      localStorage.removeItem('mazeRanking-hard');
+      
+      // Limpar ranking do quiz se existir
+      localStorage.removeItem('quizRanking');
+      
+      // Recarregar o ranking atual
       const rankingKey = `mazeRanking-${difficulty}`;
-      localStorage.removeItem(rankingKey);
+      const savedRanking = localStorage.getItem(rankingKey);
+      if (savedRanking) {
+        setRanking(JSON.parse(savedRanking));
+      } else {
+        setRanking([]);
+      }
+      
+      // Tocar som de botão
+      audioManager.playSound('buttonClick');
+      
+      alert('Cache limpo com sucesso!');
     }
   };
 
@@ -1338,8 +1424,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
     
     const directionName = directionMap[direction] || 'Forward';
     // Caminho relativo à pasta public (começa com /)
-    // Usar caminho direto - navegadores modernos lidam bem com espaços em URLs
-    return `/sprites/PacketSinglesColor (1)/${directionName}/${directionName}${frame}.png`;
+    return `/sprites/player-sprites/${directionName}/${directionName}${frame}.png`;
   };
 
   const renderMaze = () => {
@@ -1459,7 +1544,10 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
           {onBackToLevelSelect && (
             <button 
               className="btn-back-levels" 
-              onClick={onBackToLevelSelect}
+              onClick={() => {
+                audioManager.playSound('buttonClick', null, 200);
+                onBackToLevelSelect();
+              }}
               title="Voltar para seleção de níveis"
             >
               ← Voltar
@@ -1666,6 +1754,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
                   draggable
                   onDragStart={(e) => handleDragStart(e, cmd)}
                   onClick={() => {
+                    audioManager.playSound('buttonClick', null, 200);
                     setSelectedBlockIndex(index);
                   }}
                 >
@@ -1681,6 +1770,15 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
           </div>
         </div>
       </div>
+      
+      {/* Botão de limpar cache - canto inferior direito */}
+      <button 
+        className="btn-clear-cache-fixed" 
+        onClick={clearCache}
+        title="Limpar Cache (apaga todos os rankings)"
+      >
+        🗑️
+      </button>
     </div>
   );
 };
