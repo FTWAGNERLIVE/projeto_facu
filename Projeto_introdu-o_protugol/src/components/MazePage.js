@@ -884,6 +884,12 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
    */
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Se um input/textarea ou elemento editável estiver focado, não interceptar teclas
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable)) {
+        return;
+      }
+
       if (isExecuting) return;
 
       switch (e.key) {
@@ -1146,7 +1152,11 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
       // Não executar mais comandos mesmo que ainda existam na fila
       if (maze[currentPos.row][currentPos.col] === MAP_SYMBOLS.END) {
         // Tocar som de chegada no destino
-        audioManager.playSound('goalReach');
+        // No nível difícil, se o mapa exige chave e o jogador ainda não a tem, suprimir o som
+        const isHardNeedsKey = difficulty === DIFFICULTY.HARD && maze[currentPos.row][currentPos.col] === MAP_SYMBOLS.END && !hasKey;
+        if (!isHardNeedsKey) {
+          audioManager.playSound('goalReach');
+        }
         
         // Animar frames: 1, 2, 1, 3 durante o movimento final
         const animateFinalMovement = async () => {
