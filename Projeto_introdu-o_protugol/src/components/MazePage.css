@@ -793,6 +793,111 @@
 }
 .queue-remove:hover { transform: scale(1.06); background: rgba(244,67,54,0.18); }
 
+/* ========== BOTÕES MOBILE ========== */
+.mobile-controls {
+  display: none; /* Escondido por padrão (desktop) */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none; /* Permite clicar através, exceto nos botões */
+  z-index: 999;
+}
+
+.mobile-controls.mobile-visible {
+  display: block !important;
+}
+
+.mobile-controls-left,
+.mobile-controls-right {
+  display: none; /* Escondido por padrão */
+  flex-direction: column;
+  gap: 15px;
+  position: fixed;
+  z-index: 1000;
+  pointer-events: auto; /* Permite clicar nos botões */
+}
+
+.mobile-controls.mobile-visible .mobile-controls-left,
+.mobile-controls.mobile-visible .mobile-controls-right {
+  display: flex !important;
+}
+
+.mobile-controls-left {
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  align-items: flex-start;
+  min-width: 70px;
+}
+
+.mobile-controls-right {
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  align-items: flex-end;
+  min-width: 70px;
+}
+
+.mobile-btn {
+  width: 70px;
+  height: 70px;
+  border-radius: 15px;
+  border: 2px solid var(--glass-border);
+  background: linear-gradient(135deg, rgba(0, 234, 255, 0.12), rgba(188, 19, 254, 0.08));
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(0, 234, 255, 0.18), rgba(188, 19, 254, 0.14));
+  border-color: var(--ciano);
+  box-shadow: 0 6px 16px rgba(0, 234, 255, 0.2);
+}
+
+.mobile-btn:active:not(:disabled) {
+  transform: scale(0.95);
+  background: linear-gradient(135deg, rgba(0, 234, 255, 0.25), rgba(188, 19, 254, 0.18));
+  box-shadow: 0 2px 8px rgba(0, 234, 255, 0.3);
+}
+
+.mobile-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.mobile-btn-icon {
+  font-size: 2rem;
+  color: var(--ciano);
+  text-shadow: 0 0 8px rgba(0, 234, 255, 0.5);
+  font-weight: bold;
+}
+
+.mobile-btn-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mobile-btn-up .mobile-btn-icon { color: var(--amarelo); }
+.mobile-btn-down .mobile-btn-icon { color: var(--amarelo); }
+.mobile-btn-left .mobile-btn-icon { color: var(--roxo); }
+.mobile-btn-right .mobile-btn-icon { color: var(--roxo); }
+
 /* ========== RESPONSIVE ========== */
 @media (max-width:1024px) {
   .maze-container { grid-template-columns: 1fr; }
@@ -801,17 +906,264 @@
   .commands-grid { grid-template-columns: repeat(4, 1fr); gap:8px; }
 }
 
+/* Esconder elementos em mobile */
+.mobile-hidden {
+  display: none !important;
+}
+
 @media (max-width:768px) {
-  .maze-header h1 { font-size:1.9rem; }
-  .header-info-container { flex-direction:column; gap:12px; }
-  .timer-display, .progress-display, .gamepad-status-display { width:100%; max-width:100%; }
-  .maze-cell { width:40px; height:40px; }
-  .player-char { font-size:24px; }
-  .player-sprite { background-size: 400% 200%; }
-  .player-sprite::before { font-size:24px; }
-  .commands-grid { grid-template-columns: 1fr 1fr; gap:8px; }
-  .maze-controls { flex-direction:column; }
-  .btn { width:100%; }
+  /* Header compacto */
+  .header-top.mobile-compact h1 {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+  }
+
+  .maze-header {
+    margin-bottom: 15px;
+  }
+
+  .header-info-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .timer-display, 
+  .progress-display {
+    flex: 1;
+    min-width: 150px;
+    max-width: 200px;
+    font-size: 0.9rem;
+    padding: 8px 12px;
+  }
+
+  .timer-value {
+    font-size: 1.2rem;
+  }
+
+  /* Layout para landscape */
+  .maze-container {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .maze-section {
+    position: relative;
+    padding: 5px;
+    padding-left: 75px;
+    padding-right: 75px;
+    padding-bottom: 50px;
+  }
+
+  .maze-area {
+    margin: 0 auto;
+    transform: scale(0.65);
+    transform-origin: center;
+    max-width: 100%;
+    margin-bottom: 15px;
+  }
+
+  .maze-cell {
+    width: 28px;
+    height: 28px;
+  }
+
+  .player-char {
+    font-size: 18px;
+  }
+
+  .player-sprite {
+    background-size: 400% 200%;
+  }
+
+  .player-sprite::before {
+    font-size: 18px;
+  }
+
+  /* Botões de movimento mobile */
+  .mobile-controls {
+    display: block !important;
+  }
+
+  .mobile-controls-left,
+  .mobile-controls-right {
+    display: flex !important;
+  }
+
+  .mobile-controls-left {
+    left: 8px;
+  }
+
+  .mobile-controls-right {
+    right: 8px;
+  }
+
+  .mobile-btn {
+    width: 65px;
+    height: 65px;
+  }
+
+  .mobile-btn-icon {
+    font-size: 1.8rem;
+  }
+
+  .mobile-btn-label {
+    font-size: 0.7rem;
+  }
+
+  /* Controles do labirinto */
+  .maze-controls {
+    flex-direction: row;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    flex: 0 0 auto;
+  }
+
+  .btn-execute {
+    min-width: 180px;
+  }
+}
+
+/* Otimização para landscape (horizontal) */
+@media (max-width:768px) and (orientation: landscape) {
+  .maze-page {
+    padding: 10px;
+  }
+
+  .maze-header {
+    margin-bottom: 10px;
+  }
+
+  .header-top.mobile-compact h1 {
+    font-size: 1.3rem;
+  }
+
+  .header-info-container {
+    gap: 6px;
+  }
+
+  .timer-display,
+  .progress-display {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    min-width: 120px;
+    max-width: 160px;
+  }
+
+  .timer-value {
+    font-size: 1.1rem;
+  }
+
+  .maze-section {
+    padding-left: 70px;
+    padding-right: 70px;
+    padding-bottom: 45px;
+    padding-top: 5px;
+  }
+
+  .maze-area {
+    transform: scale(0.55);
+    transform-origin: center;
+    margin-bottom: 10px;
+  }
+
+  .maze-cell {
+    width: 24px;
+    height: 24px;
+  }
+
+  .mobile-controls-left {
+    left: 5px;
+  }
+
+  .mobile-controls-right {
+    right: 5px;
+  }
+
+  .mobile-btn {
+    width: 60px;
+    height: 60px;
+  }
+
+  .mobile-btn-icon {
+    font-size: 1.6rem;
+  }
+
+  .mobile-btn-label {
+    font-size: 0.65rem;
+  }
+
+  .maze-controls {
+    margin-top: 8px;
+  }
+
+  .btn {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .btn-execute {
+    min-width: 160px;
+  }
+}
+
+/* Media query adicional para garantir que funcione em dispositivos touch */
+@media (max-width: 1024px) and (hover: none) and (pointer: coarse) {
+  .mobile-controls {
+    display: block !important;
+  }
+
+  .mobile-controls-left,
+  .mobile-controls-right {
+    display: flex !important;
+  }
+}
+
+@media (max-width:480px) {
+  .maze-section {
+    padding-left: 70px;
+    padding-right: 70px;
+    padding-top: 5px;
+    padding-bottom: 45px;
+  }
+
+  .mobile-controls-left {
+    left: 5px;
+  }
+
+  .mobile-controls-right {
+    right: 5px;
+  }
+
+  .mobile-btn {
+    width: 55px;
+    height: 55px;
+  }
+
+  .mobile-btn-icon {
+    font-size: 1.4rem;
+  }
+
+  .mobile-btn-label {
+    font-size: 0.6rem;
+  }
+
+  .maze-area {
+    transform: scale(0.6);
+    transform-origin: center;
+  }
+
+  .maze-cell {
+    width: 26px;
+    height: 26px;
+  }
 }
 
 /* small utility tweaks to ensure contrast on very dark screens */

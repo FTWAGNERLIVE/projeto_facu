@@ -1,7 +1,7 @@
 {
-  "short_name": "Quiz Portugol",
-  "name": "Quiz de Lógica de Programação em Portugol",
-  "description": "Quiz interativo e jogo de labirinto para aprender programação em Portugol",
+  "short_name": "Labirinto Portugol",
+  "name": "Labirinto de Programação em Portugol",
+  "description": "Jogo de labirinto programável para aprender programação em Portugol",
   "icons": [
     {
       "src": "favicon.ico",

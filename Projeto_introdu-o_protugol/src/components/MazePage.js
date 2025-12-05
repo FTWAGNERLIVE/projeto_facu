@@ -68,6 +68,8 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
   const [draggedBlock, setDraggedBlock] = useState(null);
   // Índice do bloco selecionado (navegação por teclado)
   const [selectedBlockIndex, setSelectedBlockIndex] = useState(0);
+  // Indica se está em dispositivo mobile
+  const [isMobile, setIsMobile] = useState(false);
   
   // ========== ESTADOS DO CONTROLE PS4 ==========
   // Indica se um controle está conectado
@@ -265,6 +267,23 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
 
     return bestPosition;
   };
+
+  // Detectar se é dispositivo mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobileDevice = window.innerWidth <= 768 || 
+                           (window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches) ||
+                           /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(isMobileDevice);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
 
   // Carregar ranking e iniciar sincronização
   useEffect(() => {
@@ -1019,6 +1038,26 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
     setCommandQueue([]);
   };
 
+  // ========== FUNÇÃO PARA ADICIONAR COMANDO VIA BOTÃO MOBILE ==========
+  const handleMobileCommandClick = (direction) => {
+    if (isExecuting) return;
+    
+    // Encontrar o comando correspondente
+    const command = AVAILABLE_COMMANDS.find(cmd => cmd.id === direction);
+    if (!command) return;
+    
+    audioManager.playSound('buttonClick', null, 200);
+    
+    // Adicionar comando à fila
+    const newQueue = [...commandQueue, { ...command, uniqueId: commandIdCounter.current++ }];
+    setCommandQueue(newQueue);
+    
+    // Marcar que o jogo foi iniciado quando o primeiro comando é adicionado
+    if (newQueue.length === 1) {
+      setGameStarted(true);
+    }
+  };
+
   // ========== FUNÇÕES DE EXECUÇÃO ==========
   
   /**
@@ -1394,9 +1433,6 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
       localStorage.removeItem('mazeRanking-medium');
       localStorage.removeItem('mazeRanking-hard');
       
-      // Limpar ranking do quiz se existir
-      localStorage.removeItem('quizRanking');
-      
       // Recarregar o ranking atual
       const rankingKey = `mazeRanking-${difficulty}`;
       const savedRanking = localStorage.getItem(rankingKey);
@@ -1520,11 +1556,11 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
   return (
     <div className="maze-page">
       <div className="maze-header"> 
-        <div className="header-top">
+        <div className={`header-top ${isMobile ? 'mobile-compact' : ''}`}>
           <h1>Labirinto de Programação</h1>
         </div>
         <div className="header-info-container">
-          <div className="difficulty-badge">
+          <div className={`difficulty-badge ${isMobile ? 'mobile-hidden' : ''}`}>
             {difficulty === DIFFICULTY.EASY && DIFFICULTY_STARS[DIFFICULTY.EASY] + ' ' + DIFFICULTY_NAMES[DIFFICULTY.EASY]}
             {difficulty === DIFFICULTY.MEDIUM && DIFFICULTY_STARS[DIFFICULTY.MEDIUM] + ' ' + DIFFICULTY_NAMES[DIFFICULTY.MEDIUM]}
             {difficulty === DIFFICULTY.HARD && DIFFICULTY_STARS[DIFFICULTY.HARD] + ' ' + DIFFICULTY_NAMES[DIFFICULTY.HARD]}
@@ -1545,7 +1581,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
               <span className="key-obtained">🔑 Chave obtida!</span>
             )}
           </div>
-          <div className={`gamepad-status-display ${gamepadConnected ? 'connected' : 'disconnected'}`}>
+          <div className={`gamepad-status-display ${gamepadConnected ? 'connected' : 'disconnected'} ${isMobile ? 'mobile-hidden' : ''}`}>
             <span className="gamepad-status-label">Controle:</span>
             <span className="gamepad-status-value">
               {gamepadConnected ? 'Conectado' : 'Desconectado'}
@@ -1553,7 +1589,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
           </div>
           {onBackToLevelSelect && (
             <button 
-              className="btn-back-levels" 
+              className={`btn-back-levels ${isMobile ? 'mobile-hidden' : ''}`}
               onClick={() => {
                 audioManager.playSound('buttonClick', null, 200);
                 onBackToLevelSelect();
@@ -1639,7 +1675,7 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
 
       <div className="maze-container">
         {/* Ranking Sidebar */}
-        <div className="ranking-sidebar">
+        <div className={`ranking-sidebar ${isMobile ? 'mobile-hidden' : ''}`}>
           <div className="ranking-header">
             <h3>Top 10 - {DIFFICULTY_NAMES[difficulty]}</h3>
             {ranking.length > 0 && (
@@ -1684,6 +1720,53 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
           <div className={`maze-area ${(isLoadingMap || isLoadingInitial) ? 'hidden' : ''}`}>
             {renderMaze()}
           </div>
+
+          {/* Botões de Movimento Mobile */}
+          <div className={`mobile-controls ${isMobile ? 'mobile-visible' : ''}`}>
+            {/* Lado Esquerdo: Cima e Baixo */}
+            <div className="mobile-controls-left">
+              <button
+                className="mobile-btn mobile-btn-up"
+                onClick={() => handleMobileCommandClick('up')}
+                disabled={isExecuting}
+                aria-label="Mover para cima"
+              >
+                <span className="mobile-btn-icon">↑</span>
+                <span className="mobile-btn-label">Cima</span>
+              </button>
+              <button
+                className="mobile-btn mobile-btn-down"
+                onClick={() => handleMobileCommandClick('down')}
+                disabled={isExecuting}
+                aria-label="Mover para baixo"
+              >
+                <span className="mobile-btn-icon">↓</span>
+                <span className="mobile-btn-label">Baixo</span>
+              </button>
+            </div>
+
+            {/* Lado Direito: Esquerda e Direita */}
+            <div className="mobile-controls-right">
+              <button
+                className="mobile-btn mobile-btn-left"
+                onClick={() => handleMobileCommandClick('left')}
+                disabled={isExecuting}
+                aria-label="Mover para esquerda"
+              >
+                <span className="mobile-btn-icon">←</span>
+                <span className="mobile-btn-label">Esquerda</span>
+              </button>
+              <button
+                className="mobile-btn mobile-btn-right"
+                onClick={() => handleMobileCommandClick('right')}
+                disabled={isExecuting}
+                aria-label="Mover para direita"
+              >
+                <span className="mobile-btn-icon">→</span>
+                <span className="mobile-btn-label">Direita</span>
+              </button>
+            </div>
+          </div>
           
           <div className="maze-controls">
             <button 
@@ -1693,13 +1776,13 @@ const MazePage = ({ difficulty = 'medium', onBackToLevelSelect }) => {
             >
               {isExecuting ? 'Executando...' : '▶ Executar Comandos'}
             </button>
-            <button className="btn btn-reset" onClick={resetPosition}>
+            <button className={`btn btn-reset ${isMobile ? 'mobile-hidden' : ''}`} onClick={resetPosition}>
               🔄 Resetar
             </button>
           </div>
         </div>
 
-        <div className="commands-section">
+        <div className={`commands-section ${isMobile ? 'mobile-hidden' : ''}`}>
           <div className="command-queue">
             <div className="queue-header">
               <h3>Fila de Comandos</h3>

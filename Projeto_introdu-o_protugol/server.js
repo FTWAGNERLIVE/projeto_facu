@@ -27,8 +27,7 @@ if (!fs.existsSync(RANKINGS_FILE)) {
   fs.writeFileSync(RANKINGS_FILE, JSON.stringify({
     mazeRankingEasy: [],
     mazeRankingMedium: [],
-    mazeRankingHard: [],
-    quizRanking: []
+    mazeRankingHard: []
   }));
 }
 
@@ -42,8 +41,7 @@ const readRankings = () => {
     return {
       mazeRankingEasy: [],
       mazeRankingMedium: [],
-      mazeRankingHard: [],
-      quizRanking: []
+      mazeRankingHard: []
     };
   }
 };
@@ -75,8 +73,7 @@ app.get('/api/rankings/:type', (req, res) => {
   const rankingMap = {
     'maze-easy': 'mazeRankingEasy',
     'maze-medium': 'mazeRankingMedium',
-    'maze-hard': 'mazeRankingHard',
-    'quiz': 'quizRanking'
+    'maze-hard': 'mazeRankingHard'
   };
   
   const key = rankingMap[type];
@@ -101,8 +98,7 @@ app.post('/api/rankings/:type', (req, res) => {
   const rankingMap = {
     'maze-easy': 'mazeRankingEasy',
     'maze-medium': 'mazeRankingMedium',
-    'maze-hard': 'mazeRankingHard',
-    'quiz': 'quizRanking'
+    'maze-hard': 'mazeRankingHard'
   };
   
   const key = rankingMap[type];
@@ -115,13 +111,8 @@ app.post('/api/rankings/:type', (req, res) => {
   ranking.push(entry);
   
   // Ordenar e manter apenas Top 10
-  if (type.startsWith('maze-')) {
-    // Para labirinto: ordenar por tempo (menor é melhor)
-    ranking.sort((a, b) => a.time - b.time);
-  } else {
-    // Para quiz: ordenar por porcentagem (maior é melhor)
-    ranking.sort((a, b) => (b.percentage || 0) - (a.percentage || 0));
-  }
+  // Para labirinto: ordenar por tempo (menor é melhor)
+  ranking.sort((a, b) => a.time - b.time);
   
   ranking = ranking.slice(0, 10);
   rankings[key] = ranking;
@@ -148,8 +139,7 @@ app.post('/api/rankings/:type/replace', (req, res) => {
   const rankingMap = {
     'maze-easy': 'mazeRankingEasy',
     'maze-medium': 'mazeRankingMedium',
-    'maze-hard': 'mazeRankingHard',
-    'quiz': 'quizRanking'
+    'maze-hard': 'mazeRankingHard'
   };
   
   const key = rankingMap[type];
@@ -174,8 +164,7 @@ app.delete('/api/rankings/:type', (req, res) => {
   const rankingMap = {
     'maze-easy': 'mazeRankingEasy',
     'maze-medium': 'mazeRankingMedium',
-    'maze-hard': 'mazeRankingHard',
-    'quiz': 'quizRanking'
+    'maze-hard': 'mazeRankingHard'
   };
   
   const key = rankingMap[type];

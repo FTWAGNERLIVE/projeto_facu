@@ -1,7 +1,7 @@
 {
-  "name": "quiz-portugol",
+  "name": "labirinto-portugol",
   "version": "1.0.0",
-  "description": "Quiz de Lógica de Programação em Portugol",
+  "description": "Jogo de Labirinto Programável em Portugol",
   "main": "index.js",
   "scripts": {
     "start": "cross-env NODE_OPTIONS=\"--localstorage-file=./.localstorage\" HOST=0.0.0.0 react-scripts start",

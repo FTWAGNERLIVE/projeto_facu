@@ -58,7 +58,7 @@ class RankingSync {
 
   /**
    * Busca ranking do servidor
-   * @param {string} type - Tipo de ranking ('maze-easy', 'maze-medium', 'maze-hard', 'quiz')
+   * @param {string} type - Tipo de ranking ('maze-easy', 'maze-medium', 'maze-hard')
    */
   async getRanking(type) {
     // Tentar buscar do servidor
@@ -210,9 +210,6 @@ class RankingSync {
         if (allRankings.mazeRankingHard) {
           localStorage.setItem('mazeRanking-hard', JSON.stringify(allRankings.mazeRankingHard));
         }
-        if (allRankings.quizRanking) {
-          localStorage.setItem('quizRanking', JSON.stringify(allRankings.quizRanking));
-        }
 
         this.lastSyncTime = new Date();
         return true;
@@ -265,8 +262,7 @@ class RankingSync {
     const keyMap = {
       'maze-easy': 'mazeRanking-easy',
       'maze-medium': 'mazeRanking-medium',
-      'maze-hard': 'mazeRanking-hard',
-      'quiz': 'quizRanking'
+      'maze-hard': 'mazeRanking-hard'
     };
 
     const key = keyMap[type];
@@ -280,8 +276,7 @@ class RankingSync {
     const keyMap = {
       'maze-easy': 'mazeRanking-easy',
       'maze-medium': 'mazeRanking-medium',
-      'maze-hard': 'mazeRanking-hard',
-      'quiz': 'quizRanking'
+      'maze-hard': 'mazeRanking-hard'
     };
 
     const key = keyMap[type];
