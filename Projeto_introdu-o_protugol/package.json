@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "cross-env NODE_OPTIONS=\"--localstorage-file=./.localstorage\" HOST=0.0.0.0 react-scripts start",
-    "build": "cross-env NODE_OPTIONS=\"--localstorage-file=./.localstorage\" react-scripts build",
+    "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "server": "node server.js",
