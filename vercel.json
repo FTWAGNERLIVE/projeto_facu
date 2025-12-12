@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd Projeto_introdu-o_protugol && npm run build",
+  "outputDirectory": "Projeto_introdu-o_protugol/build",
+  "installCommand": "cd Projeto_introdu-o_protugol && npm install"
+}
+
